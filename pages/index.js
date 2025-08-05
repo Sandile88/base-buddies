@@ -101,7 +101,7 @@ export default function Home() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 text-center">
             <Trophy className="w-8 h-8 text-accent-500 mx-auto mb-2" />
             <div className="text-2xl font-bold text-secondary-800">1,247</div>
@@ -117,7 +117,7 @@ export default function Home() {
             <div className="text-2xl font-bold text-secondary-800">12.5 ETH</div>
             <div className="text-gray-600">Total Rewards</div>
           </div>
-        </div>
+        </div> */}
 
         {/* Filters and Search */}
         <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 mb-8">
