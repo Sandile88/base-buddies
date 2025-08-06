@@ -1,8 +1,10 @@
+"use client";
+
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target } from 'lucide-react';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 
 const mockCreatedChallenges = [
   {

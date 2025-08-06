@@ -1,13 +1,17 @@
+"use client"
+
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Clock, Users, Trophy, Upload, Send, CheckCircle, XCircle, ArrowLeft, Share } from 'lucide-react';
-import Layout from '../../components/Layout';
+import Layout from '../../../components/Layout';
 
 export default function ChallengeDetails() {
   const router = useRouter();
-  const { id } = router.query;
+  const params = useParams();
+  const id = params.id;  
   const [activeTab, setActiveTab] = useState('details');
   const [submission, setSubmission] = useState('');
   const [file, setFile] = useState(null);

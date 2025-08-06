@@ -1,8 +1,10 @@
+"use client"
+
 import { useState } from 'react';
 import Head from 'next/head';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { Trophy, Upload, Link as LinkIcon, Type, Clock, Users } from 'lucide-react';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 
 const proofTypes = [
   { value: 'image', label: 'Image Upload', icon: Upload },
