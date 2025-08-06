@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from 'react';
-import Head from 'next/head';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Filter, Search, Clock, Trophy, Users } from 'lucide-react';
+import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import Layout from '../components/Layout';
 import ChallengeCard from '../components/ChallengeCard';
 
@@ -62,6 +62,14 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
+  const { setFrameReady, isFrameReady } = useMiniKit();
+
+  // Initialize MiniKit frame
+  useEffect(() => {
+    if (!isFrameReady) {
+      setFrameReady();
+    }
+  }, [setFrameReady, isFrameReady]);
 
   const categories = ['All', 'Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
 
@@ -74,11 +82,6 @@ export default function Home() {
 
   return (
     <Layout>
-      <Head>
-        <title>Base Buddies - Social Challenge Platform</title>
-        <meta name="description" content="Join fun, low-stakes challenges and earn rewards on Base" />
-      </Head>
-
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="text-center mb-12 animate-fade-in">
@@ -101,25 +104,6 @@ export default function Home() {
             </button>
           </div>
         </div>
-
-        {/* Stats */}
-        {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 text-center">
-            <Trophy className="w-8 h-8 text-accent-500 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-secondary-800">1,247</div>
-            <div className="text-gray-600">Active Challenges</div>
-          </div>
-          <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 text-center">
-            <Users className="w-8 h-8 text-success-500 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-secondary-800">8,392</div>
-            <div className="text-gray-600">Active Participants</div>
-          </div>
-          <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 text-center">
-            <Clock className="w-8 h-8 text-secondary-500 mx-auto mb-2" />
-            <div className="text-2xl font-bold text-secondary-800">12.5 ETH</div>
-            <div className="text-gray-600">Total Rewards</div>
-          </div>
-        </div> */}
 
         {/* Filters and Search */}
         <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 mb-8">
