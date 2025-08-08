@@ -5,58 +5,55 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target } from 'lucide-react';
 import Layout from '../../components/Layout';
+import { useAccount } from 'wagmi';
+import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges,useCompleteChallenge } from '../../lib/useContract';
 
-const mockCreatedChallenges = [
-  {
-    id: 1,
-    title: "Share Your Pet's Cutest Moment",
-    status: "active",
-    participants: 23,
-    reward: "0.01 ETH",
-    timeLeft: "2 days",
-    submissions: 15
-  },
-  {
-    id: 2,
-    title: "Your Favorite Recipe",
-    status: "completed",
-    participants: 45,
-    reward: "0.015 ETH",
-    timeLeft: "Ended",
-    submissions: 32
-  }
-];
-
-const mockAcceptedChallenges = [
-  {
-    id: 3,
-    title: "Name a Historical Figure",
-    status: "submitted",
-    creator: "0xHistoryBuff",
-    reward: "0.005 ETH",
-    timeLeft: "5 days",
-    mySubmission: "Pending verification"
-  },
-  {
-    id: 4,
-    title: "Recommend a Great Book",
-    status: "verified",
-    creator: "0xBookworm",
-    reward: "0.008 ETH",
-    timeLeft: "Completed",
-    mySubmission: "Verified ✓"
-  }
-];
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const { address } = useAccount();
+  const { data: allChallenges, isLoading: loadingChallenges } = useGetAllChallenges();
+  const { data: createdChallenges, isLoading: loadingCreated } = useGetUserCreatedChallenges(address);
+  const { data: completedChallengeIds, isLoading: loadingCompleted } = useGetUserCompletedChallenges(address);
+  const { completeChallenge, isLoading: completingChallenge } = useCompleteChallenge();
 
+  // Calculate stats from real data
   const user = {
-    address: '0x1234...5678',
-    balance: '0.125 ETH',
-    challengesCreated: 12,
-    challengesCompleted: 8,
-    totalRewards: '0.05 ETH'
+    address: address || 'Not connected',
+    balance: '0.125 ETH', // This would need to be fetched separately
+    challengesCreated: createdChallenges?.length || 0,
+    challengesCompleted: completedChallengeIds?.length || 0,
+    totalRewards: '0.05 ETH' // This would need to be calculated from completed challenges
+  };
+
+  const formatEth = (wei) => {
+    if (!wei) return '0 ETH';
+    const eth = parseFloat(wei) / 1e18;
+    return `${eth.toFixed(4)} ETH`;
+  };
+
+  const isChallengeActive = (challenge) => {
+    if (!challenge) return false;
+    const now = Math.floor(Date.now() / 1000);
+    return now <= challenge.deadline && challenge.currentParticipants < challenge.maxParticipants;
+  };
+
+  const getTimeLeft = (deadline) => {
+    const now = Math.floor(Date.now() / 1000);
+    const timeLeft = deadline - now;
+    if (timeLeft <= 0) return 'Ended';
+    const days = Math.floor(timeLeft / (24 * 60 * 60));
+    const hours = Math.floor((timeLeft % (24 * 60 * 60)) / (60 * 60));
+    if (days > 0) return `${days}d ${hours}h`;
+    return `${hours}h`;
+  };
+
+  const handleCompleteChallenge = async (challengeId) => {
+    try {
+      await completeChallenge({ args: [challengeId] });
+    } catch (error) {
+      console.error('Error completing challenge:', error);
+    }
   };
 
   return (
@@ -67,18 +64,18 @@ export default function Dashboard() {
       </Head>
 
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
+        {/* header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-secondary-800 mb-2">Dashboard</h1>
           <p className="text-gray-600">Track your challenges and rewards</p>
         </div>
 
-        {/* Stats Cards */}
+        {/* stats cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <Trophy className="w-8 h-8 text-accent-500" />
-              <TrendingUp className="w-4 h-4 text-success-500" />
+              <TrendingUp className="w-4 h-4 text-secondary-500" />
             </div>
             <div className="text-2xl font-bold text-secondary-800 mb-1">{user.totalRewards}</div>
             <div className="text-gray-600 text-sm">Total Rewards Earned</div>
@@ -97,8 +94,8 @@ export default function Dashboard() {
 
           <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
             <div className="flex items-center justify-between mb-2">
-              <Target className="w-8 h-8 text-success-500" />
-              <span className="text-xs bg-success-100 text-success-700 px-2 py-1 rounded-full">
+              <Target className="w-8 h-8 text-secondary-500" />
+              <span className="text-xs bg-secondary-100 text-secondary-700 px-2 py-1 rounded-full">
                 +{user.challengesCompleted}
               </span>
             </div>
@@ -110,15 +107,18 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-2">
               <Users className="w-8 h-8 text-accent-600" />
               <span className="text-xs bg-accent-100 text-accent-700 px-2 py-1 rounded-full">
-                68
+              {allChallenges?.reduce((total, challenge) => total + challenge.currentParticipants, 0) || 0}
+
               </span>
             </div>
-            <div className="text-2xl font-bold text-secondary-800 mb-1">68</div>
+            <div className="text-2xl font-bold text-secondary-800 mb-1">
+            {allChallenges?.reduce((total, challenge) => total + challenge.currentParticipants, 0) || 0}
+            </div>
             <div className="text-gray-600 text-sm">Total Participants</div>
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* tabs */}
         <div className="flex space-x-1 mb-8">
           {[
             { id: 'overview', label: 'Overview' },
@@ -139,43 +139,43 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'overview' && (
+        
+        {/* loading state */}
+        {(loadingChallenges || loadingCreated || loadingCompleted) && (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary-500 mx-auto"></div>
+            <p className="text-gray-600 mt-2">Loading challenges...</p>
+          </div>
+        )}
+
+        {/* tab content */}
+        {activeTab === 'overview' && !loadingChallenges && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Recent Activity */}
             <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
               <h3 className="text-lg font-semibold text-secondary-800 mb-4">Recent Activity</h3>
               <div className="space-y-3">
-                <div className="flex items-center space-x-3 p-3 bg-success-50 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-success-500" />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-800">Challenge completed</div>
-                    <div className="text-xs text-gray-600">"Recommend a Great Book" - 0.008 ETH earned</div>
-                  </div>
-                  <div className="text-xs text-gray-500">2h ago</div>
-                </div>
+              {allChallenges?.slice(0, 3).map((challenge, index) => (
+
                 
-                <div className="flex items-center space-x-3 p-3 bg-accent-50 rounded-lg">
-                  <Trophy className="w-5 h-5 text-accent-500" />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-800">New participant</div>
-                    <div className="text-xs text-gray-600">"Share Your Pet's Cutest Moment" gained a participant</div>
-                  </div>
-                  <div className="text-xs text-gray-500">4h ago</div>
-                </div>
-                
-                <div className="flex items-center space-x-3 p-3 bg-secondary-50 rounded-lg">
+                <div key={challenge.id} className="flex items-center space-x-3 p-3 bg-secondary-50 rounded-lg">
                   <Plus className="w-5 h-5 text-secondary-500" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-800">Challenge created</div>
-                    <div className="text-xs text-gray-600">"Your Favorite Recipe" is now live</div>
-                  </div>
-                  <div className="text-xs text-gray-500">1d ago</div>
+                  <div className="text-xs text-gray-600">{challenge.title}" - {formatEth(challenge.reward)}</div>
                 </div>
+                <div className="text-xs text-gray-500">{getTimeLeft(challenge.deadline)} left</div>
+                  </div>
+                ))}
+                {(!allChallenges || allChallenges.length === 0) && (
+                  <div className="text-center py-4 text-gray-500">
+                    No challenges created yet
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Quick Actions */}
+            {/* quick actions */}
             <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
               <h3 className="text-lg font-semibold text-secondary-800 mb-4">Quick Actions</h3>
               <div className="space-y-4">
@@ -209,7 +209,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === 'created' && (
+        {activeTab === 'created' && !loadingCreated && (
           <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-secondary-800">Your Created Challenges</h3>
@@ -223,7 +223,7 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-4">
-              {mockCreatedChallenges.map((challenge) => (
+              {createdChallenges.map((challenge) => (
                 <div
                   key={challenge.id}
                   className="border border-primary-200 rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -234,30 +234,30 @@ export default function Dashboard() {
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center space-x-1">
                           <Users className="w-4 h-4" />
-                          <span>{challenge.participants} participants</span>
+                          <span>{challenge.currentParticipants}/{challenge.maxParticipants} participants</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Trophy className="w-4 h-4" />
-                          <span>{challenge.reward}</span>
+                          <span>{formatEth(challenge.reward)}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="w-4 h-4" />
-                          <span>{challenge.timeLeft}</span>
+                          <span>{getTimeLeft(challenge.deadline)}</span>
                         </div>
                       </div>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      challenge.status === 'active' 
-                        ? 'bg-success-100 text-success-700'
+                        isChallengeActive(challenge)
+                        ? 'bg-secondary-100 text-secondary-700'
                         : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {challenge.status}
+                      {isChallengeActive(challenge) ? 'active' : 'ended'}
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-gray-600">
-                      {challenge.submissions} submissions received
+                    Created by: {challenge.creatorNickname || 'Anonymous'}
                     </div>
                     <Link
                       href={`/challenge/${challenge.id}`}
@@ -268,16 +268,28 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
+            {(!createdChallenges || createdChallenges.length === 0) && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Plus className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>No challenges created yet</p>
+                    <Link href="/create" className="text-secondary-600 hover:text-secondary-700 mt-2 inline-block">
+                      Create your first challenge →
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'accepted' && (
+
+        {activeTab === 'accepted' && !loadingChallenges && (
           <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
-            <h3 className="text-lg font-semibold text-secondary-800 mb-6">Your Accepted Challenges</h3>
+            <h3 className="text-lg font-semibold text-secondary-800 mb-6">Available Challenges</h3>
             
             <div className="space-y-4">
-              {mockAcceptedChallenges.map((challenge) => (
+            {allChallenges?.filter(challenge => 
+                challenge.creatorAddress !== address && isChallengeActive(challenge)
+              ).map((challenge) => (
                 <div
                   key={challenge.id}
                   className="border border-primary-200 rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -286,41 +298,49 @@ export default function Dashboard() {
                     <div>
                       <h4 className="font-semibold text-secondary-800 mb-1">{challenge.title}</h4>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <div>Creator: <span className="text-secondary-600">{challenge.creator}</span></div>
+                        <div>Creator: <span className="text-secondary-600">{challenge.creatorNickname || 'Anonymous'}</span></div>
                         <div className="flex items-center space-x-1">
                           <Trophy className="w-4 h-4" />
-                          <span>{challenge.reward}</span>
+                          <span>{formatEth(challenge.reward)}</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Clock className="w-4 h-4" />
-                          <span>{challenge.timeLeft}</span>
+                          <span>{getTimeLeft(challenge.deadline)}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Users className="w-4 h-4" />
+                          <span>{challenge.currentParticipants}/{challenge.maxParticipants}</span>
                         </div>
                       </div>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      challenge.status === 'verified' 
-                        ? 'bg-success-100 text-success-700'
-                        : challenge.status === 'submitted'
-                        ? 'bg-warning-100 text-warning-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {challenge.status}
+                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-success-100 text-success-700">
+                      Available
                     </span>
                   </div>
                   
                   <div className="flex items-center justify-between">
                     <div className="text-sm text-gray-600">
-                      Status: {challenge.mySubmission}
+                    {challenge.description}
                     </div>
-                    <Link
-                      href={`/challenge/${challenge.id}`}
-                      className="text-secondary-600 hover:text-secondary-700 text-sm font-medium"
+                    <button
+                      onClick={() => handleCompleteChallenge(challenge.id)}
+                      disabled={completingChallenge}
+                      className="bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50"
                     >
-                      View Challenge →
-                    </Link>
+                      {completingChallenge ? 'Completing...' : 'Complete Challenge'}
+                    </button>
                   </div>
                 </div>
               ))}
+              {(!allChallenges || allChallenges.filter(challenge => 
+                challenge.creatorAddress !== address && isChallengeActive(challenge)
+              ).length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  <Target className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p>No available challenges</p>
+                  <p className="text-sm">Check back later for new challenges!</p>
+                </div>
+              )}
             </div>
           </div>
         )}

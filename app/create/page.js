@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import { Trophy, Upload, Link as LinkIcon, Type, Clock, Users } from 'lucide-react';
@@ -33,6 +33,14 @@ export default function CreateChallenge() {
 
   const categories = ['Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
 
+  // setting a default category when component mounts
+  useEffect(() => {
+    if (!formData.category) {
+      setFormData(prev => ({ ...prev, category: categories[0] }));
+    }
+  }, []);
+
+
   const handleSubmit =  async (e) => {
     e.preventDefault();
     if (!address) {
@@ -40,35 +48,102 @@ export default function CreateChallenge() {
       return;
     }
 
+     // validating form data
+     const reward = parseFloat(formData.reward);
+     const duration = parseInt(formData.duration);
+     const maxParticipants = parseInt(formData.maxParticipants);
+ 
+     if (isNaN(reward) || reward <= 0) {
+       alert('Please enter a valid reward amount');
+       return;
+     }
+ 
+     if (isNaN(duration) || duration <= 0) {
+       alert('Please select a valid duration');
+       return;
+     }
+ 
+     if (isNaN(maxParticipants) || maxParticipants <= 0) {
+       alert('Please select valid max participants');
+       return;
+     }
+ 
+     if (!formData.title.trim()) {
+       alert('Please enter a challenge title');
+       return;
+     }
+ 
+     if (!formData.description.trim()) {
+       alert('Please enter a challenge description');
+       return;
+     }
+ 
+     if (!formData.proofType) {
+       alert('Please select a proof type');
+       return;
+     }
+ 
+
     try {
       const deadline = Math.floor(Date.now() / 1000) + (parseInt(formData.duration) * 24 * 60 * 60);
+
+      console.log('Form validation passed:', {
+        title: formData.title,
+        description: formData.description,
+        creatorNickname: formData.creatorNickname || 'Anonymous',
+        reward,
+        deadline,
+        maxParticipants
+      });
 
       const params = createChallengeParams(
         formData.title,
         formData.description,
         formData.creatorNickname || 'Anonymous',
-        parseFloat(formData.reward),
+        reward, 
         deadline,
-        parseInt(formData.maxParticipants),
-      ); 
+        maxParticipants, 
+      );
 
-      await createChallenge(params);
+      console.log('Challenge params created:', params);
+
+      createChallenge(params);
 
     } catch (error) {
-      console.error('Error creating challenge:', error);
-      alert('Failed to create challenge. Please try again.');
+      console.error('Error creating challenge:', {
+        message: error.message,
+        stack: error.stack,
+        formData
+      });
+      alert(`Failed to create challenge: ${error.message}`);
     }
   };
 
-  if (isSuccess) {
-    router.push('/dashboard'); 
-  }
+  // redirecting on success
+  useEffect(() => {
+    if (isSuccess) {
+      alert('Challenge created successfully!');
+      router.push('/dashboard');
+    }
+  }, [isSuccess, router]);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+   // calculating total cost safely
+   const calculateTotalCost = () => {
+    const reward = parseFloat(formData.reward);
+    const participants = parseInt(formData.maxParticipants);
+    
+    if (isNaN(reward) || isNaN(participants)) {
+      return '0.000';
+    }
+    
+    return (reward * participants).toFixed(7);
   };
 
 
@@ -262,9 +337,7 @@ export default function CreateChallenge() {
               <Trophy className="absolute left-4 top-1/2 transform -translate-y-1/2 text-accent-500 w-4 h-4" />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Total cost: {formData.reward && formData.maxParticipants ? 
-              `${(parseFloat(formData.reward) * parseInt(formData.maxParticipants)).toFixed(3)} ETH` : 
-              '0.000 ETH'} (Reward × Max Participants)             
+            Total cost: {calculateTotalCost()} ETH (Reward × Max Participants)         
               </p>
           </div>
 
