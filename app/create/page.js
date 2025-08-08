@@ -5,6 +5,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/navigation';
 import { Trophy, Upload, Link as LinkIcon, Type, Clock, Users } from 'lucide-react';
 import Layout from '../../components/Layout';
+import { useCreateChallenge, createChallengeParams } from '../../lib/useContract';
+import { useAccount } from 'wagmi';
 
 const proofTypes = [
   { value: 'image', label: 'Image Upload', icon: Upload },
@@ -14,24 +16,53 @@ const proofTypes = [
 
 export default function CreateChallenge() {
   const router = useRouter();
+  const { address } = useAccount();
+  const { createChallenge, isLoading, isSuccess, error } = useCreateChallenge();
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'Social',
+    creatorNickname: '',
+    category: '',
     reward: '',
-    duration: '7',
-    proofType: 'image',
+    duration: '',
+    maxParticipants: '3',
+    proofType: '',
     requirements: '',
   });
 
   const categories = ['Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
 
-  const handleSubmit = (e) => {
+  const handleSubmit =  async (e) => {
     e.preventDefault();
-    // TODO: Integrate with smart contract
-    console.log('Creating challenge:', formData);
-    router.push('/dashboard');
+    if (!address) {
+      alert('Please connect your wallet first.');
+      return;
+    }
+
+    try {
+      const deadline = Math.floor(Date.now() / 1000) + (parseInt(formData.duration) * 24 * 60 * 60);
+
+      const params = createChallengeParams(
+        formData.title,
+        formData.description,
+        formData.creatorNickname || 'Anonymous',
+        parseFloat(formData.reward),
+        deadline,
+        parseInt(formData.maxParticipants),
+      ); 
+
+      await createChallenge(params);
+
+    } catch (error) {
+      console.error('Error creating challenge:', error);
+      alert('Failed to create challenge. Please try again.');
+    }
   };
+
+  if (isSuccess) {
+    router.push('/dashboard'); 
+  }
 
   const handleChange = (e) => {
     setFormData({
@@ -39,6 +70,8 @@ export default function CreateChallenge() {
       [e.target.name]: e.target.value
     });
   };
+
+
 
   return (
     <Layout>
@@ -53,8 +86,14 @@ export default function CreateChallenge() {
           <p className="text-gray-600">Launch a fun challenge and build community engagement!</p>
         </div>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <p className="text-red-800 text-sm">Error: {error.message}</p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-8 space-y-6">
-          {/* Title */}
+          {/* title */}
           <div>
             <label htmlFor="title" className="block text-sm font-semibold text-secondary-800 mb-2">
               Challenge Title *
@@ -71,7 +110,23 @@ export default function CreateChallenge() {
             />
           </div>
 
-          {/* Description */}
+          {/* nickname */}
+          <div>
+            <label htmlFor="creatorNickname" className="block text-sm font-semibold text-secondary-800 mb-2">
+              Your Nickname
+            </label>
+            <input
+              type="text"
+              id="creatorNickname"
+              name="creatorNickname"
+              value={formData.creatorNickname}
+              onChange={handleChange}
+              placeholder="Enter your nickname (optional)"
+              className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
+            />
+          </div>
+
+          {/* description */}
           <div>
             <label htmlFor="description" className="block text-sm font-semibold text-secondary-800 mb-2">
               Description *
@@ -88,8 +143,8 @@ export default function CreateChallenge() {
             />
           </div>
 
-          {/* Category and Duration */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* category, duration, and max participants*/}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label htmlFor="category" className="block text-sm font-semibold text-secondary-800 mb-2">
                 Category *
@@ -127,9 +182,28 @@ export default function CreateChallenge() {
                 <option value="30">30 days</option>
               </select>
             </div>
-          </div>
 
-          {/* Proof Type */}
+            <div>
+              <label htmlFor="maxParticipants" className="block text-sm font-semibold text-secondary-800 mb-2">
+                Max Participants *
+              </label>
+              <select
+                id="maxParticipants"
+                name="maxParticipants"
+                value={formData.maxParticipants}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
+                required
+              >
+                <option value="1">1 participant</option>
+                <option value="2">2 participants</option>
+                <option value="3">3 participants</option>
+              </select>
+            </div>
+          </div>
+        
+
+          {/* proof type */}
           <div>
             <label className="block text-sm font-semibold text-secondary-800 mb-3">
               Proof Type *
@@ -167,7 +241,7 @@ export default function CreateChallenge() {
             </div>
           </div>
 
-          {/* Reward */}
+          {/* reward */}
           <div>
             <label htmlFor="reward" className="block text-sm font-semibold text-secondary-800 mb-2">
               Reward Amount (ETH) *
@@ -179,18 +253,22 @@ export default function CreateChallenge() {
                 name="reward"
                 value={formData.reward}
                 onChange={handleChange}
-                placeholder="0.01"
-                step="0.001"
-                min="0.001"
+                placeholder="0.0000001"
+                step="0.0000001"
+                min="0.0000001"
                 className="w-full px-4 py-3 pl-12 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
               />
               <Trophy className="absolute left-4 top-1/2 transform -translate-y-1/2 text-accent-500 w-4 h-4" />
             </div>
-            <p className="text-xs text-gray-500 mt-1">Minimum reward: 0.001 ETH</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Total cost: {formData.reward && formData.maxParticipants ? 
+              `${(parseFloat(formData.reward) * parseInt(formData.maxParticipants)).toFixed(3)} ETH` : 
+              '0.000 ETH'} (Reward × Max Participants)             
+              </p>
           </div>
 
-          {/* Requirements */}
+          {/* requirements */}
           <div>
             <label htmlFor="requirements" className="block text-sm font-semibold text-secondary-800 mb-2">
               Additional Requirements
@@ -206,7 +284,7 @@ export default function CreateChallenge() {
             />
           </div>
 
-          {/* Preview Card */}
+          {/* preview card */}
           <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg p-6 border border-secondary-200">
             <h3 className="text-lg font-semibold text-secondary-800 mb-4">Preview</h3>
             <div className="bg-white rounded-lg p-4 border border-primary-200">
@@ -218,6 +296,10 @@ export default function CreateChallenge() {
                   <div className="flex items-center space-x-1">
                     <Clock className="w-4 h-4" />
                     <span>{formData.duration} days</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Users className="w-4 h-4" />
+                    <span>{formData.maxParticipants} participants</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Trophy className="w-4 h-4 text-accent-500" />
@@ -234,20 +316,22 @@ export default function CreateChallenge() {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* submit button */}
           <div className="flex gap-4">
             <button
               type="button"
               onClick={() => router.push('/')}
               className="flex-1 border-2 border-primary-300 text-gray-600 py-3 px-6 rounded-lg font-semibold hover:bg-primary-50 transition-all"
+              disabled={isLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg"
+              disabled={isLoading || !address}
+              className="flex-1 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Create Challenge
+              {isLoading ? 'Creating Challenge...' : 'Create Challenge'}
             </button>
           </div>
         </form>
