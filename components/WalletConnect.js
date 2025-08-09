@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId } from 'wagmi';
+import { baseSepolia } from 'wagmi/chains';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { Wallet, LogOut, User } from 'lucide-react';
 
@@ -9,6 +10,8 @@ export default function WalletConnect() {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChainAsync } = useSwitchChain();
+  const chainId = useChainId();
   const { setFrameReady, isFrameReady } = useMiniKit();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -24,7 +27,10 @@ export default function WalletConnect() {
     try {
       // Try to connect with the first available connector (usually Farcaster)
       if (connectors.length > 0) {
-        await connect({ connector: connectors[0] });
+        await connect({ connector: connectors[0], chainId: baseSepolia.id });
+        try {
+          await switchChainAsync({ chainId: baseSepolia.id });
+        } catch (_) {}
       }
     } catch (error) {
       console.error('Failed to connect wallet:', error);
@@ -32,6 +38,12 @@ export default function WalletConnect() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isConnected && chainId !== baseSepolia.id) {
+      switchChainAsync({ chainId: baseSepolia.id }).catch(() => {});
+    }
+  }, [isConnected, chainId, switchChainAsync]);
 
   const handleDisconnect = () => {
     disconnect();
