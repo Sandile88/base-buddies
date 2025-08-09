@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target } from 'lucide-react';
 import Layout from '../../components/Layout';
 import { useAccount } from 'wagmi';
+import { formatEther } from 'viem';
 import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges,useCompleteChallenge } from '../../lib/useContract';
 
 
@@ -27,20 +28,27 @@ export default function Dashboard() {
   };
 
   const formatEth = (wei) => {
-    if (!wei) return '0 ETH';
-    const eth = parseFloat(wei) / 1e18;
+    if (wei === undefined || wei === null) return '0 ETH';
+    const value = typeof wei === 'bigint' ? wei : BigInt(wei);
+    const eth = Number(formatEther(value));
     return `${eth.toFixed(4)} ETH`;
   };
+
+  const toNumber = (value) => (typeof value === 'bigint' ? Number(value) : value ?? 0);
 
   const isChallengeActive = (challenge) => {
     if (!challenge) return false;
     const now = Math.floor(Date.now() / 1000);
-    return now <= challenge.deadline && challenge.currentParticipants < challenge.maxParticipants;
+    const deadline = toNumber(challenge.deadline);
+    const currentParticipants = toNumber(challenge.currentParticipants);
+    const maxParticipants = toNumber(challenge.maxParticipants);
+    return now <= deadline && currentParticipants < maxParticipants;
   };
 
   const getTimeLeft = (deadline) => {
     const now = Math.floor(Date.now() / 1000);
-    const timeLeft = deadline - now;
+    const dl = toNumber(deadline);
+    const timeLeft = dl - now;
     if (timeLeft <= 0) return 'Ended';
     const days = Math.floor(timeLeft / (24 * 60 * 60));
     const hours = Math.floor((timeLeft % (24 * 60 * 60)) / (60 * 60));
@@ -107,12 +115,12 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-2">
               <Users className="w-8 h-8 text-accent-600" />
               <span className="text-xs bg-accent-100 text-accent-700 px-2 py-1 rounded-full">
-              {allChallenges?.reduce((total, challenge) => total + challenge.currentParticipants, 0) || 0}
+              {allChallenges?.reduce((total, challenge) => total + toNumber(challenge.currentParticipants), 0) || 0}
 
               </span>
             </div>
             <div className="text-2xl font-bold text-secondary-800 mb-1">
-            {allChallenges?.reduce((total, challenge) => total + challenge.currentParticipants, 0) || 0}
+            {allChallenges?.reduce((total, challenge) => total + toNumber(challenge.currentParticipants), 0) || 0}
             </div>
             <div className="text-gray-600 text-sm">Total Participants</div>
           </div>
@@ -234,7 +242,7 @@ export default function Dashboard() {
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <div className="flex items-center space-x-1">
                           <Users className="w-4 h-4" />
-                          <span>{challenge.currentParticipants}/{challenge.maxParticipants} participants</span>
+                          <span>{toNumber(challenge.currentParticipants)}/{toNumber(challenge.maxParticipants)} participants</span>
                         </div>
                         <div className="flex items-center space-x-1">
                           <Trophy className="w-4 h-4" />
@@ -309,7 +317,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <Users className="w-4 h-4" />
-                          <span>{challenge.currentParticipants}/{challenge.maxParticipants}</span>
+                           <span>{toNumber(challenge.currentParticipants)}/{toNumber(challenge.maxParticipants)}</span>
                         </div>
                       </div>
                     </div>
