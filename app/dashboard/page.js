@@ -7,7 +7,7 @@ import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target } from 'luc
 import Layout from '../../components/Layout';
 import { useAccount } from 'wagmi';
 import { formatEther } from 'viem';
-import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges,useCompleteChallenge } from '../../lib/useContract';
+import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges, useCompleteChallenge, useDeleteChallenge } from '../../lib/useContract';
 
 
 export default function Dashboard() {
@@ -17,12 +17,16 @@ export default function Dashboard() {
   const { data: createdChallenges, isLoading: loadingCreated } = useGetUserCreatedChallenges(address);
   const { data: completedChallengeIds, isLoading: loadingCompleted } = useGetUserCompletedChallenges(address);
   const { completeChallenge, isLoading: completingChallenge } = useCompleteChallenge();
+  const { deleteChallenge, isLoading: deletingChallenge } = useDeleteChallenge();
+
+  const allChallengesList = Array.isArray(allChallenges) ? allChallenges : [];
+  const createdChallengesList = Array.isArray(createdChallenges) ? createdChallenges : [];
 
   // Calculate stats from real data
   const user = {
     address: address || 'Not connected',
     balance: '0.125 ETH', // This would need to be fetched separately
-    challengesCreated: createdChallenges?.length || 0,
+    challengesCreated: createdChallengesList.length || 0,
     challengesCompleted: completedChallengeIds?.length || 0,
     totalRewards: '0.05 ETH' // This would need to be calculated from completed challenges
   };
@@ -61,6 +65,16 @@ export default function Dashboard() {
       await completeChallenge({ args: [challengeId] });
     } catch (error) {
       console.error('Error completing challenge:', error);
+    }
+  };
+
+  const handleDeleteChallenge = async (challengeId) => {
+    try {
+      const confirmed = window.confirm('Delete this challenge? This cannot be undone.');
+      if (!confirmed) return;
+      await deleteChallenge({ args: [challengeId] });
+    } catch (error) {
+      console.error('Error deleting challenge:', error);
     }
   };
 
@@ -163,7 +177,7 @@ export default function Dashboard() {
             <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
               <h3 className="text-lg font-semibold text-secondary-800 mb-4">Recent Activity</h3>
               <div className="space-y-3">
-              {allChallenges?.slice(0, 3).map((challenge, index) => (
+               {allChallengesList.slice(0, 3).map((challenge, index) => (
 
                 
                 <div key={challenge.id} className="flex items-center space-x-3 p-3 bg-secondary-50 rounded-lg">
@@ -175,7 +189,7 @@ export default function Dashboard() {
                 <div className="text-xs text-gray-500">{getTimeLeft(challenge.deadline)} left</div>
                   </div>
                 ))}
-                {(!allChallenges || allChallenges.length === 0) && (
+               {(allChallengesList.length === 0) && (
                   <div className="text-center py-4 text-gray-500">
                     No challenges created yet
                   </div>
@@ -231,7 +245,7 @@ export default function Dashboard() {
             </div>
             
             <div className="space-y-4">
-              {createdChallenges.map((challenge) => (
+              {createdChallengesList.map((challenge) => (
                 <div
                   key={challenge.id}
                   className="border border-primary-200 rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -267,16 +281,25 @@ export default function Dashboard() {
                     <div className="text-sm text-gray-600">
                     Created by: {challenge.creatorNickname || 'Anonymous'}
                     </div>
-                    <Link
-                      href={`/challenge/${challenge.id}`}
-                      className="text-secondary-600 hover:text-secondary-700 text-sm font-medium"
-                    >
-                      View Details →
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/challenge/${challenge.id}`}
+                        className="text-secondary-600 hover:text-secondary-700 text-sm font-medium"
+                      >
+                        View Details →
+                      </Link>
+                      <button
+                        onClick={() => handleDeleteChallenge(challenge.id)}
+                        disabled={deletingChallenge}
+                        className="text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-50"
+                      >
+                        {deletingChallenge ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
-            {(!createdChallenges || createdChallenges.length === 0) && (
+            {(createdChallengesList.length === 0) && (
                   <div className="text-center py-8 text-gray-500">
                     <Plus className="w-12 h-12 mx-auto mb-4 text-gray-300" />
                     <p>No challenges created yet</p>

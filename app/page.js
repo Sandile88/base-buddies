@@ -107,13 +107,15 @@ export default function Home() {
   }, [allChallenges]);
 
   const categories = useMemo(() => {
+    const fixed = ['Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
     const set = new Set(
       (challenges || [])
         .map((c) => c.category)
         .filter((c) => typeof c === 'string' && c.length > 0)
     );
-    const list = Array.from(set).sort();
-    return ['All', ...list];
+    const discovered = Array.from(set).sort();
+    const merged = Array.from(new Set([...fixed, ...discovered]));
+    return ['All', ...merged];
   }, [challenges]);
 
   const filteredAndSorted = useMemo(() => {
