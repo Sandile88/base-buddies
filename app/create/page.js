@@ -26,19 +26,13 @@ export default function CreateChallenge() {
     category: '',
     reward: '',
     duration: '',
-    maxParticipants: '3',
+    maxParticipants: '',
     proofType: '',
     requirements: '',
   });
 
   const categories = ['Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
 
-  // setting a default category when component mounts
-  useEffect(() => {
-    if (!formData.category) {
-      setFormData(prev => ({ ...prev, category: categories[0] }));
-    }
-  }, []);
 
 
   const handleSubmit =  async (e) => {
@@ -78,6 +72,11 @@ export default function CreateChallenge() {
        return;
      }
  
+     if (!formData.category) {
+       alert('Please select a category');
+       return;
+     }
+
      if (!formData.proofType) {
        alert('Please select a proof type');
        return;
@@ -106,6 +105,28 @@ export default function CreateChallenge() {
       );
 
       console.log('Challenge params created:', params);
+
+      // Store extended metadata locally for UI (off-chain)
+      try {
+        const createdAt = Math.floor(Date.now() / 1000);
+        const pendingKey = 'challengeMetaPending';
+        const pendingRaw = localStorage.getItem(pendingKey);
+        const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
+        pending.push({
+          title: formData.title,
+          description: formData.description,
+          creatorAddress: address,
+          rewardWei: null,
+          rewardEth: reward,
+          deadline,
+          maxParticipants,
+          category: formData.category,
+          proofType: formData.proofType,
+          requirements: formData.requirements,
+          createdAt,
+        });
+        localStorage.setItem(pendingKey, JSON.stringify(pending));
+      } catch (_) {}
 
       createChallenge(params);
 
@@ -232,6 +253,7 @@ export default function CreateChallenge() {
                 className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
               >
+                <option value="">Select category</option>
                 {categories.map((category) => (
                   <option key={category} value={category}>{category}</option>
                 ))}
@@ -250,6 +272,7 @@ export default function CreateChallenge() {
                 className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
               >
+                <option value="">Select duration</option>
                 <option value="1">1 day</option>
                 <option value="3">3 days</option>
                 <option value="7">7 days</option>
@@ -270,6 +293,7 @@ export default function CreateChallenge() {
                 className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
               >
+                <option value="">Select participants</option>
                 <option value="1">1 participant</option>
                 <option value="2">2 participants</option>
                 <option value="3">3 participants</option>

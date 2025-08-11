@@ -48,22 +48,73 @@ export default function Home() {
 
   const challenges = useMemo(() => {
     const list = Array.isArray(allChallenges) ? allChallenges : [];
-    return list.map((c) => ({
-      id: c.id,
-      title: c.title,
-      description: c.description,
-      reward: formatEth(c.reward),
-      category: 'Social',
-      timeLeft: getTimeLeft(c.deadline),
-      participants: toNumber(c.currentParticipants),
-      status: isChallengeActive(c) ? 'active' : 'ended',
-      creator: c.creatorNickname || c.creatorAddress,
-      proofType: 'file',
-      raw: c,
-    }));
+
+    const getMetaForChallenge = (challenge) => {
+      try {
+        const byIdKey = 'challengeMetaById';
+        const pendingKey = 'challengeMetaPending';
+        const byIdRaw = typeof window !== 'undefined' ? localStorage.getItem(byIdKey) : null;
+        const pendingRaw = typeof window !== 'undefined' ? localStorage.getItem(pendingKey) : null;
+        const byId = byIdRaw ? JSON.parse(byIdRaw) : {};
+        const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
+
+        if (byId[String(challenge.id)]) {
+          return byId[String(challenge.id)];
+        }
+
+        const matchIdx = pending.findIndex((p) =>
+          p &&
+          p.title === challenge.title &&
+          p.description === challenge.description &&
+          (p.creatorAddress?.toLowerCase?.() === challenge.creatorAddress?.toLowerCase?.()) &&
+          Number(p.deadline) === Number(challenge.deadline) &&
+          Number(p.maxParticipants) === Number(challenge.maxParticipants)
+        );
+
+        if (matchIdx !== -1) {
+          const matched = pending[matchIdx];
+          byId[String(challenge.id)] = matched;
+          pending.splice(matchIdx, 1);
+          localStorage.setItem(byIdKey, JSON.stringify(byId));
+          localStorage.setItem(pendingKey, JSON.stringify(pending));
+          return matched;
+        }
+
+        return null;
+      } catch (_) {
+        return null;
+      }
+    };
+
+    return list.map((c) => {
+      const meta = getMetaForChallenge(c);
+      return {
+        id: c.id,
+        title: c.title,
+        description: c.description,
+        reward: formatEth(c.reward),
+        category: meta?.category || 'General',
+        timeLeft: getTimeLeft(c.deadline),
+        participants: toNumber(c.currentParticipants),
+        status: isChallengeActive(c) ? 'active' : 'ended',
+        creator: c.creatorNickname || c.creatorAddress,
+        proofType: meta?.proofType || 'file',
+        createdAt: meta?.createdAt,
+        requirements: meta?.requirements,
+        raw: c,
+      };
+    });
   }, [allChallenges]);
 
-  const categories = ['All', 'Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
+  const categories = useMemo(() => {
+    const set = new Set(
+      (challenges || [])
+        .map((c) => c.category)
+        .filter((c) => typeof c === 'string' && c.length > 0)
+    );
+    const list = Array.from(set).sort();
+    return ['All', ...list];
+  }, [challenges]);
 
   const filteredAndSorted = useMemo(() => {
     let list = challenges.filter((ch) => {
@@ -117,6 +168,22 @@ export default function Home() {
             <a href="#challenges" className="border-2 border-secondary-500 text-secondary-600 px-8 py-3 rounded-lg font-semibold hover:bg-secondary-50 transition-all">
               Browse Challenges
             </a>
+          </div>
+        </div>
+
+        {/* How it works */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
+            <div className="text-xl font-semibold text-secondary-800 mb-2">Browse</div>
+            <p className="text-gray-600 text-sm">Explore challenges created by the community. No wallet needed to browse.</p>
+          </div>
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
+            <div className="text-xl font-semibold text-secondary-800 mb-2">Connect</div>
+            <p className="text-gray-600 text-sm">Connect your wallet to create a challenge or submit your proof.</p>
+          </div>
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
+            <div className="text-xl font-semibold text-secondary-800 mb-2">Earn</div>
+            <p className="text-gray-600 text-sm">Complete challenges on time to earn rewards paid by creators.</p>
           </div>
         </div>
 
