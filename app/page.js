@@ -174,20 +174,22 @@ export default function Home() {
         </div>
 
         {/* How it works */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
-            <div className="text-xl font-semibold text-secondary-800 mb-2">Browse</div>
-            <p className="text-gray-600 text-sm">Explore challenges created by the community. No wallet needed to browse.</p>
+        {!isConnected && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
+              <div className="text-xl font-semibold text-secondary-800 mb-2">Browse</div>
+              <p className="text-gray-600 text-sm">Explore challenges created by the community. No wallet needed to browse.</p>
+            </div>
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
+              <div className="text-xl font-semibold text-secondary-800 mb-2">Connect</div>
+              <p className="text-gray-600 text-sm">Connect your wallet to create a challenge or submit your proof.</p>
+            </div>
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
+              <div className="text-xl font-semibold text-secondary-800 mb-2">Earn</div>
+              <p className="text-gray-600 text-sm">Complete challenges on time to earn rewards paid by creators.</p>
+            </div>
           </div>
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
-            <div className="text-xl font-semibold text-secondary-800 mb-2">Connect</div>
-            <p className="text-gray-600 text-sm">Connect your wallet to create a challenge or submit your proof.</p>
-          </div>
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
-            <div className="text-xl font-semibold text-secondary-800 mb-2">Earn</div>
-            <p className="text-gray-600 text-sm">Complete challenges on time to earn rewards paid by creators.</p>
-          </div>
-        </div>
+        )}
 
         {/* Filters and Search */}
         <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 mb-8">
