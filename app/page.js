@@ -1,84 +1,95 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Filter, Search, Clock, Trophy, Users } from 'lucide-react';
+import { Filter, Search } from 'lucide-react';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
+import { useAccount } from 'wagmi';
+import { formatEther } from 'viem';
 import Layout from '../components/Layout';
 import ChallengeCard from '../components/ChallengeCard';
-
-const mockChallenges = [
-  {
-    id: 1,
-    title: "Share Your Pet's Cutest Moment",
-    description: "Post a photo or video of your pet doing something adorable!",
-    reward: "0.01 ETH",
-    category: "Social",
-    timeLeft: "2 days",
-    participants: 23,
-    status: "active",
-    creator: "0xPetLover123",
-    proofType: "image"
-  },
-  {
-    id: 2,
-    title: "Name a Historical Figure from the 1800s",
-    description: "Tell us about an interesting historical figure from the 19th century and why they're significant.",
-    reward: "0.005 ETH",
-    category: "Education",
-    timeLeft: "5 days",
-    participants: 41,
-    status: "active",
-    creator: "0xHistoryBuff",
-    proofType: "text"
-  },
-  {
-    id: 3,
-    title: "Show Us Your Favorite Recipe",
-    description: "Share a photo of a dish you made along with the recipe!",
-    reward: "0.015 ETH",
-    category: "Lifestyle",
-    timeLeft: "1 day",
-    participants: 67,
-    status: "active",
-    creator: "0xChefMaster",
-    proofType: "image"
-  },
-  {
-    id: 4,
-    title: "Recommend a Great Book",
-    description: "Share a book recommendation with a brief review explaining why others should read it.",
-    reward: "0.008 ETH",
-    category: "Education",
-    timeLeft: "3 days",
-    participants: 15,
-    status: "active",
-    creator: "0xBookworm",
-    proofType: "text"
-  }
-];
+import WalletConnect from '../components/WalletConnect';
+import { useGetAllChallenges } from '../lib/useContract';
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
   const { setFrameReady, isFrameReady } = useMiniKit();
+  const { isConnected } = useAccount();
+  const { data: allChallenges, isLoading } = useGetAllChallenges();
 
-  // Initialize MiniKit frame
   useEffect(() => {
-    if (!isFrameReady) {
-      setFrameReady();
-    }
+    if (!isFrameReady) setFrameReady();
   }, [setFrameReady, isFrameReady]);
+
+  const toNumber = (value) => (typeof value === 'bigint' ? Number(value) : value ?? 0);
+  const formatEth = (wei) => {
+    if (wei === undefined || wei === null) return '0 ETH';
+    const value = typeof wei === 'bigint' ? wei : BigInt(wei);
+    const eth = Number(formatEther(value));
+    return `${eth.toFixed(4)} ETH`;
+  };
+  const getTimeLeft = (deadline) => {
+    const now = Math.floor(Date.now() / 1000);
+    const dl = toNumber(deadline);
+    const timeLeft = dl - now;
+    if (timeLeft <= 0) return 'Ended';
+    const days = Math.floor(timeLeft / (24 * 60 * 60));
+    const hours = Math.floor((timeLeft % (24 * 60 * 60)) / (60 * 60));
+    return days > 0 ? `${days}d ${hours}h` : `${hours}h`;
+  };
+  const isChallengeActive = (c) => {
+    if (!c) return false;
+    const now = Math.floor(Date.now() / 1000);
+    const deadline = toNumber(c.deadline);
+    return now <= deadline && toNumber(c.currentParticipants) < toNumber(c.maxParticipants);
+  };
+
+  const challenges = useMemo(() => {
+    const list = Array.isArray(allChallenges) ? allChallenges : [];
+    return list.map((c) => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      reward: formatEth(c.reward),
+      category: 'Social',
+      timeLeft: getTimeLeft(c.deadline),
+      participants: toNumber(c.currentParticipants),
+      status: isChallengeActive(c) ? 'active' : 'ended',
+      creator: c.creatorNickname || c.creatorAddress,
+      proofType: 'file',
+      raw: c,
+    }));
+  }, [allChallenges]);
 
   const categories = ['All', 'Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
 
-  const filteredChallenges = mockChallenges.filter(challenge => {
-    const matchesSearch = challenge.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         challenge.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || challenge.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  const filteredAndSorted = useMemo(() => {
+    let list = challenges.filter((ch) => {
+      const matchesSearch =
+        ch.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        ch.description.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = selectedCategory === 'All' || ch.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+    switch (sortBy) {
+      case 'reward':
+        list = list.sort((a, b) => Number(b.raw.reward) - Number(a.raw.reward));
+        break;
+      case 'participants':
+        list = list.sort((a, b) => b.participants - a.participants);
+        break;
+      case 'ending':
+        list = list.sort((a, b) => toNumber(a.raw.deadline) - toNumber(b.raw.deadline));
+        break;
+      case 'newest':
+      default:
+        list = list.sort((a, b) => Number(b.raw.id) - Number(a.raw.id));
+        break;
+    }
+    return list;
+  }, [challenges, searchTerm, selectedCategory, sortBy]);
 
   return (
     <Layout>
@@ -89,19 +100,23 @@ export default function Home() {
             Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary-500 to-accent-500">Base Buddies</span>
           </h1>
           <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-            Join fun, low-stakes challenges and earn rewards on Base. Create challenges, submit proofs, and build community together!
+            Discover community challenges on Base. Browse freely; connect your wallet when you're ready to create or submit.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/create"
-              className="bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg"
-            >
-              Create Challenge
-            </Link>
-            <button className="border-2 border-secondary-500 text-secondary-600 px-8 py-3 rounded-lg font-semibold hover:bg-secondary-50 transition-all">
+            {isConnected ? (
+              <Link
+                href="/create"
+                className="bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg"
+              >
+                Create Challenge
+              </Link>
+            ) : (
+              <WalletConnect />
+            )}
+            <a href="#challenges" className="border-2 border-secondary-500 text-secondary-600 px-8 py-3 rounded-lg font-semibold hover:bg-secondary-50 transition-all">
               Browse Challenges
-            </button>
+            </a>
           </div>
         </div>
 
@@ -139,7 +154,7 @@ export default function Home() {
 
             {/* Sort */}
             <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-500" />
+              <span className="text-sm text-gray-500">Sort</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -155,18 +170,24 @@ export default function Home() {
         </div>
 
         {/* Challenges Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredChallenges.map((challenge) => (
+        <div id="challenges" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isLoading && (
+            <div className="col-span-full text-center py-8 text-gray-600">Loading challenges...</div>
+          )}
+          {!isLoading && filteredAndSorted.length === 0 && (
+            <div className="col-span-full text-center py-8 text-gray-500">No challenges found</div>
+          )}
+          {!isLoading && filteredAndSorted.map((challenge) => (
             <ChallengeCard key={challenge.id} challenge={challenge} />
           ))}
         </div>
 
-        {/* Load More */}
-        <div className="text-center mt-12">
+        {/* Load More placeholder (for future pagination) */}
+        {/* <div className="text-center mt-12">
           <button className="bg-white/60 backdrop-blur-sm border border-primary-300 text-secondary-600 px-8 py-3 rounded-lg font-semibold hover:bg-white hover:shadow-lg transition-all">
             Load More Challenges
           </button>
-        </div>
+        </div> */}
       </div>
     </Layout>
   );
