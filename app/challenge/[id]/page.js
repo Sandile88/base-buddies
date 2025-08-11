@@ -26,6 +26,7 @@ export default function ChallengeDetails() {
     idParam !== undefined ? BigInt(idParam) : undefined;
   const [activeTab, setActiveTab] = useState("details");
   const [submission, setSubmission] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [file, setFile] = useState(null);
 
   const { data, isLoading, error } = useGetChallenge(challengeId);
@@ -66,9 +67,18 @@ export default function ChallengeDetails() {
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitting proof:", { submission, file });
+    if (!isConnected) return;
+    setIsSubmitting(true);
+    try {
+      // Placeholder submit logic – integrate contract write when ready
+      await new Promise((res) => setTimeout(res, 1200));
+      window.alert('Submitting proof');
+      window.location.href = '/dashboard';
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -77,7 +87,18 @@ export default function ChallengeDetails() {
     }
   };
 
-  const challenge = data
+  const isValid = (c) => {
+    try {
+      const idNum = Number(c?.id ?? 0);
+      const hasTitle = typeof c?.title === 'string' && c.title.trim().length > 0;
+      const deadline = toNumber(c?.deadline);
+      return idNum > 0 && hasTitle && deadline > 0;
+    } catch {
+      return false;
+    }
+  };
+
+  const challenge = data && isValid(data)
     ? {
         id: data.id,
         title: data.title,
@@ -270,7 +291,6 @@ export default function ChallengeDetails() {
                       Timeline
                     </h3>
                     <div className="space-y-2 text-sm text-gray-600">
-                      <div>Created: {meta?.createdAt ? new Date(meta.createdAt * 1000).toLocaleString() : 'N/A'}</div>
                       <div>Ends: {challenge.timeLeft}</div>
                     </div>
                   </div>
@@ -362,10 +382,10 @@ export default function ChallengeDetails() {
                       handleSubmit(e);
                     }}
                     className={`w-full py-3 px-6 rounded-lg font-semibold transition-all transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2 ${isConnected ? 'bg-gradient-to-r from-secondary-500 to-secondary-600 text-white hover:from-secondary-600 hover:to-secondary-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
-                    disabled={!isConnected}
+                    disabled={!isConnected || isSubmitting}
                   >
                     <Send className="w-4 h-4" />
-                    <span>Submit Proof</span>
+                    <span>{isSubmitting ? 'Submitting proof...' : 'Submit Proof'}</span>
                   </button>
                 </div>
               )}

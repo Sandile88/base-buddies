@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import Layout from '../../components/Layout';
 import { useAccount } from 'wagmi';
 import { formatEther } from 'viem';
@@ -13,14 +14,27 @@ import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedCh
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const { address } = useAccount();
-  const { data: allChallenges, isLoading: loadingChallenges } = useGetAllChallenges();
-  const { data: createdChallenges, isLoading: loadingCreated } = useGetUserCreatedChallenges(address);
-  const { data: completedChallengeIds, isLoading: loadingCompleted } = useGetUserCompletedChallenges(address);
+  const { data: allChallenges, isLoading: loadingChallenges, refetch: refetchAll } = useGetAllChallenges();
+  const { data: createdChallenges, isLoading: loadingCreated, refetch: refetchCreated } = useGetUserCreatedChallenges(address);
+  const { data: completedChallengeIds, isLoading: loadingCompleted, refetch: refetchCompleted } = useGetUserCompletedChallenges(address);
   const { completeChallenge, isLoading: completingChallenge } = useCompleteChallenge();
-  const { deleteChallenge, isLoading: deletingChallenge } = useDeleteChallenge();
+  const { deleteChallenge, isLoading: deletingChallenge, isSuccess: deleteSuccess } = useDeleteChallenge();
+  const router = useRouter();
+  const [lastDeletedId, setLastDeletedId] = useState(null);
 
-  const allChallengesList = Array.isArray(allChallenges) ? allChallenges : [];
-  const createdChallengesList = Array.isArray(createdChallenges) ? createdChallenges : [];
+  const toNumber = (value) => (typeof value === 'bigint' ? Number(value) : value ?? 0);
+  const isValid = (c) => {
+    try {
+      const idNum = Number(c.id);
+      const hasTitle = typeof c.title === 'string' && c.title.trim().length > 0;
+      const deadline = toNumber(c.deadline);
+      return idNum > 0 && hasTitle && deadline > 0;
+    } catch {
+      return false;
+    }
+  };
+  const allChallengesList = (Array.isArray(allChallenges) ? allChallenges : []).filter(isValid);
+  const createdChallengesList = (Array.isArray(createdChallenges) ? createdChallenges : []).filter(isValid);
 
   // Calculate stats from real data
   const user = {
@@ -35,10 +49,9 @@ export default function Dashboard() {
     if (wei === undefined || wei === null) return '0 ETH';
     const value = typeof wei === 'bigint' ? wei : BigInt(wei);
     const eth = Number(formatEther(value));
-    return `${eth.toFixed(4)} ETH`;
+    const decimals = eth >= 1 ? 4 : eth >= 0.001 ? 6 : 8;
+    return `${eth.toFixed(decimals)} ETH`;
   };
-
-  const toNumber = (value) => (typeof value === 'bigint' ? Number(value) : value ?? 0);
 
   const isChallengeActive = (challenge) => {
     if (!challenge) return false;
@@ -60,8 +73,12 @@ export default function Dashboard() {
     return `${hours}h`;
   };
 
-  const handleCompleteChallenge = async (challengeId) => {
+  const handleCompleteChallenge = async (challengeId, creatorAddress) => {
     try {
+      if (address && creatorAddress && address.toLowerCase() === creatorAddress.toLowerCase()) {
+        window.alert('Creators cannot complete their own challenges.');
+        return;
+      }
       await completeChallenge({ args: [challengeId] });
     } catch (error) {
       console.error('Error completing challenge:', error);
@@ -72,11 +89,37 @@ export default function Dashboard() {
     try {
       const confirmed = window.confirm('Delete this challenge? This cannot be undone.');
       if (!confirmed) return;
+      setLastDeletedId(challengeId);
       await deleteChallenge({ args: [challengeId] });
     } catch (error) {
       console.error('Error deleting challenge:', error);
     }
   };
+
+  // After successful delete, refresh views and clean local metadata
+  useEffect(() => {
+    if (!deleteSuccess) return;
+    try {
+      const byIdKey = 'challengeMetaById';
+      const raw = localStorage.getItem(byIdKey);
+      if (raw) {
+        const obj = JSON.parse(raw);
+        // We don't know which id was deleted here; refetch will remove from UI.
+        // Leave metadata cleanup to challenge view if accessed later.
+        localStorage.setItem(byIdKey, JSON.stringify(obj));
+      }
+      if (lastDeletedId !== null && lastDeletedId !== undefined) {
+        // Broadcast to other routes/tabs
+        localStorage.setItem('bb:challenge-deleted-id', `${String(lastDeletedId)}:${Date.now()}`);
+        window.dispatchEvent(new CustomEvent('bb:challenge-deleted', { detail: { id: String(lastDeletedId) } }));
+      }
+    } catch (_) {}
+    refetchAll?.();
+    refetchCreated?.();
+    refetchCompleted?.();
+    router.refresh();
+    setLastDeletedId(null);
+  }, [deleteSuccess, refetchAll, refetchCreated, refetchCompleted, router, lastDeletedId]);
 
   return (
     <Layout>
@@ -129,12 +172,12 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-2">
               <Users className="w-8 h-8 text-accent-600" />
               <span className="text-xs bg-accent-100 text-accent-700 px-2 py-1 rounded-full">
-              {allChallenges?.reduce((total, challenge) => total + toNumber(challenge.currentParticipants), 0) || 0}
+              {allChallengesList.reduce((total, challenge) => total + toNumber(challenge.currentParticipants), 0) || 0}
 
               </span>
             </div>
             <div className="text-2xl font-bold text-secondary-800 mb-1">
-            {allChallenges?.reduce((total, challenge) => total + toNumber(challenge.currentParticipants), 0) || 0}
+            {allChallengesList.reduce((total, challenge) => total + toNumber(challenge.currentParticipants), 0) || 0}
             </div>
             <div className="text-gray-600 text-sm">Total Participants</div>
           </div>
@@ -177,7 +220,7 @@ export default function Dashboard() {
             <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
               <h3 className="text-lg font-semibold text-secondary-800 mb-4">Recent Activity</h3>
               <div className="space-y-3">
-               {allChallengesList.slice(0, 3).map((challenge, index) => (
+              {allChallengesList.slice(0, 3).map((challenge, index) => (
 
                 
                 <div key={challenge.id} className="flex items-center space-x-3 p-3 bg-secondary-50 rounded-lg">
@@ -318,7 +361,7 @@ export default function Dashboard() {
             <h3 className="text-lg font-semibold text-secondary-800 mb-6">Available Challenges</h3>
             
             <div className="space-y-4">
-            {allChallenges?.filter(challenge => 
+            {allChallengesList.filter(challenge => 
                 challenge.creatorAddress !== address && isChallengeActive(challenge)
               ).map((challenge) => (
                 <div
@@ -353,8 +396,8 @@ export default function Dashboard() {
                     <div className="text-sm text-gray-600">
                     {challenge.description}
                     </div>
-                    <button
-                      onClick={() => handleCompleteChallenge(challenge.id)}
+                      <button
+                      onClick={() => handleCompleteChallenge(challenge.id, challenge.creatorAddress)}
                       disabled={completingChallenge}
                       className="bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50"
                     >
@@ -363,7 +406,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-              {(!allChallenges || allChallenges.filter(challenge => 
+              {((allChallengesList.length === 0) || allChallengesList.filter(challenge => 
                 challenge.creatorAddress !== address && isChallengeActive(challenge)
               ).length === 0) && (
                 <div className="text-center py-8 text-gray-500">

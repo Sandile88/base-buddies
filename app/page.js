@@ -18,6 +18,7 @@ export default function Home() {
   const { setFrameReady, isFrameReady } = useMiniKit();
   const { isConnected } = useAccount();
   const { data: allChallenges, isLoading } = useGetAllChallenges();
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
   useEffect(() => {
     if (!isFrameReady) setFrameReady();
@@ -28,7 +29,8 @@ export default function Home() {
     if (wei === undefined || wei === null) return '0 ETH';
     const value = typeof wei === 'bigint' ? wei : BigInt(wei);
     const eth = Number(formatEther(value));
-    return `${eth.toFixed(4)} ETH`;
+    const decimals = eth >= 1 ? 4 : eth >= 0.001 ? 6 : 8;
+    return `${eth.toFixed(decimals)} ETH`;
   };
   const getTimeLeft = (deadline) => {
     const now = Math.floor(Date.now() / 1000);
@@ -86,25 +88,49 @@ export default function Home() {
       }
     };
 
-    return list.map((c) => {
+    const isValid = (c) => {
+      try {
+        const idNum = Number(c.id);
+        const hasTitle = typeof c.title === 'string' && c.title.trim().length > 0;
+        const deadline = toNumber(c.deadline);
+        return idNum > 0 && hasTitle && deadline > 0;
+      } catch {
+        return false;
+      }
+    };
+
+    return list.filter(isValid).map((c) => {
       const meta = getMetaForChallenge(c);
       return {
         id: c.id,
         title: c.title,
         description: c.description,
         reward: formatEth(c.reward),
-        category: meta?.category || 'General',
+        category: meta?.category || '',
         timeLeft: getTimeLeft(c.deadline),
         participants: toNumber(c.currentParticipants),
         status: isChallengeActive(c) ? 'active' : 'ended',
         creator: c.creatorNickname || c.creatorAddress,
         proofType: meta?.proofType || 'file',
-        createdAt: meta?.createdAt,
         requirements: meta?.requirements,
         raw: c,
       };
     });
-  }, [allChallenges]);
+  }, [allChallenges, refreshSignal]);
+
+  // Listen for delete broadcasts from other routes and bump refreshSignal
+  useEffect(() => {
+    const handler = () => setRefreshSignal((x) => x + 1);
+    const storageHandler = (e) => {
+      if (e.key === 'bb:challenge-deleted-id') handler();
+    };
+    window.addEventListener('bb:challenge-deleted', handler);
+    window.addEventListener('storage', storageHandler);
+    return () => {
+      window.removeEventListener('bb:challenge-deleted', handler);
+      window.removeEventListener('storage', storageHandler);
+    };
+  }, []);
 
   const categories = useMemo(() => {
     const fixed = ['Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
@@ -119,7 +145,7 @@ export default function Home() {
   }, [challenges]);
 
   const filteredAndSorted = useMemo(() => {
-    let list = challenges.filter((ch) => {
+    let list = (challenges || []).filter((ch) => {
       const matchesSearch =
         ch.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         ch.description.toLowerCase().includes(searchTerm.toLowerCase());

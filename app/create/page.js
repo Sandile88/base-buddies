@@ -108,7 +108,6 @@ export default function CreateChallenge() {
 
       // Store extended metadata locally for UI (off-chain)
       try {
-        const createdAt = Math.floor(Date.now() / 1000);
         const pendingKey = 'challengeMetaPending';
         const pendingRaw = localStorage.getItem(pendingKey);
         const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
@@ -123,7 +122,6 @@ export default function CreateChallenge() {
           category: formData.category,
           proofType: formData.proofType,
           requirements: formData.requirements,
-          createdAt,
         });
         localStorage.setItem(pendingKey, JSON.stringify(pending));
       } catch (_) {}
