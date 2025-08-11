@@ -103,9 +103,7 @@ export default function ChallengeDetails() {
         </title>
         <meta
           name="description"
-          content={
-            challenge?.description || "Challenge details"
-          }
+          content={challenge?.description || "Challenge details"}
         />
       </Head>
 
@@ -138,6 +136,11 @@ export default function ChallengeDetails() {
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-4">
+                    {challenge?.category && (
+                      <span className="px-3 py-1 bg-accent-100 text-accent-700 rounded-full text-sm font-semibold">
+                        {challenge.category}
+                      </span>
+                    )}
                     <span
                       className={`px-3 py-1 rounded-full text-sm font-semibold ${
                         challenge.status === "active"
@@ -200,6 +203,7 @@ export default function ChallengeDetails() {
               {[
                 { id: "details", label: "Details" },
                 { id: "submit", label: "Submit Proof" },
+                { id: 'submissions', label: 'Submissions' }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -227,6 +231,9 @@ export default function ChallengeDetails() {
                       <p className="text-gray-700">
                         No additional requirements specified.
                       </p>
+
+                      {/* <p className="text-gray-700">{challenge.requirements}</p> */}
+
                     </div>
                   </div>
 
@@ -237,8 +244,9 @@ export default function ChallengeDetails() {
                     <div className="flex items-center space-x-3">
                       <Upload className="w-5 h-5 text-secondary-600" />
                       <span className="text-gray-700 capitalize">
-                        Upload
+                        {challenge?.proofType ? `${challenge.proofType} Upload` : 'File Upload'}
                       </span>
+
                     </div>
                   </div>
 
@@ -247,6 +255,7 @@ export default function ChallengeDetails() {
                       Timeline
                     </h3>
                     <div className="space-y-2 text-sm text-gray-600">
+                      <div>Created: {challenge?.createdAt || 'N/A'}</div>
                       <div>Ends: {challenge.timeLeft}</div>
                     </div>
                   </div>
@@ -255,18 +264,49 @@ export default function ChallengeDetails() {
 
               {activeTab === "submit" && (
                 <form
-                  onSubmit={handleSubmit}
-                  className="space-y-6"
-                >
+                  onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold text-secondary-800 mb-4">
                       Submit Your Proof
                     </h3>
                     <p className="text-gray-600 mb-6">
-                      Upload your file and provide any additional
-                      context below.
+                      Upload your {challenge?.proofType || 'file'} and provide any additional context below.
                     </p>
+
                   </div>
+
+                  {/* {challenge.proofType === 'image' && (
+                <div>
+                  <label className="block text-sm font-semibold text-secondary-800 mb-2">
+                    Upload Image *
+                  </label>
+                  <div className="border-2 border-dashed border-primary-300 rounded-lg p-8 text-center hover:border-secondary-400 transition-colors">
+                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-4" />
+                    <div className="text-gray-600 mb-2">
+                      Drop your image here or click to browse
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="inline-block bg-secondary-500 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-secondary-600 transition-colors"
+                    >
+                      Choose File
+                    </label>
+                    {file && (
+                      <div className="mt-2 text-sm text-secondary-600 font-medium">
+                        {file.name}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )} */}
+                  
 
                   <div>
                     <label className="block text-sm font-semibold text-secondary-800 mb-2">
@@ -324,6 +364,18 @@ export default function ChallengeDetails() {
                     <span>Submit Proof</span>
                   </button>
                 </form>
+              )}
+              {activeTab === 'submissions' && (
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-secondary-800 mb-4">
+                      Submissions
+                    </h3>
+                  </div>
+                  <div className="text-center py-8 text-gray-500">
+                    Submissions will appear here once implemented.
+                  </div>
+                </div>
               )}
             </div>
           </>
