@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Filter, Search } from 'lucide-react';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { useAccount } from 'wagmi';
+import { useAccount, useBlockNumber } from 'wagmi';
+import { baseSepolia } from 'wagmi/chains';
 import { formatEther } from 'viem';
 import Layout from '../components/Layout';
 import ChallengeCard from '../components/ChallengeCard';
@@ -17,12 +18,23 @@ export default function Home() {
   const [sortBy, setSortBy] = useState('newest');
   const { setFrameReady, isFrameReady } = useMiniKit();
   const { isConnected } = useAccount();
-  const { data: allChallenges, isLoading } = useGetAllChallenges();
+  const { data: allChallenges, isLoading, refetch: refetchAllChallenges } = useGetAllChallenges();
   const [refreshSignal, setRefreshSignal] = useState(0);
 
   useEffect(() => {
     if (!isFrameReady) setFrameReady();
   }, [setFrameReady, isFrameReady]);
+
+  // Auto-refresh challenges and countdowns
+  const { data: homeBlockNumber } = useBlockNumber({ chainId: baseSepolia.id, watch: true });
+  useEffect(() => {
+    refetchAllChallenges?.();
+  }, [homeBlockNumber, refetchAllChallenges]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setRefreshSignal((x) => x + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const toNumber = (value) => (typeof value === 'bigint' ? Number(value) : value ?? 0);
   const formatEth = (wei) => {

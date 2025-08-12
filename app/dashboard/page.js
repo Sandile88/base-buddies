@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Layout from '../../components/Layout';
-import { useAccount } from 'wagmi';
+import { useAccount, useBalance, useBlockNumber } from 'wagmi';
+import { baseSepolia } from 'wagmi/chains';
 import { formatEther } from 'viem';
 import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges, useCompleteChallenge, useDeleteChallenge } from '../../lib/useContract';
 
@@ -37,12 +38,34 @@ export default function Dashboard() {
   const createdChallengesList = (Array.isArray(createdChallenges) ? createdChallenges : []).filter(isValid);
 
   // Calculate stats from real data
+  const { data: balanceData } = useBalance({
+    address,
+    chainId: baseSepolia.id,
+    watch: true,
+  });
+
+  // Auto-refresh dashboard data on new blocks
+  const { data: blockNumber } = useBlockNumber({ chainId: baseSepolia.id, watch: true });
+  useEffect(() => {
+    // These trigger all derived metrics to recompute (created/completed/participants/total rewards)
+    refetchAll?.();
+    refetchCreated?.();
+    refetchCompleted?.();
+  }, [blockNumber, refetchAll, refetchCreated, refetchCompleted]);
+
+  const totalRewardsWei = (Array.isArray(completedChallengeIds) ? completedChallengeIds : [])
+    .reduce((acc, completedId) => {
+      const match = allChallengesList.find((c) => Number(c.id) === Number(completedId));
+      const rewardWei = match?.reward ?? 0n;
+      return acc + (typeof rewardWei === 'bigint' ? rewardWei : BigInt(rewardWei || 0));
+    }, 0n);
+
   const user = {
     address: address || 'Not connected',
-    balance: '0.125 ETH', // This would need to be fetched separately
+    balance: formatEth(balanceData?.value ?? 0n),
     challengesCreated: createdChallengesList.length || 0,
     challengesCompleted: completedChallengeIds?.length || 0,
-    totalRewards: '0.05 ETH' // This would need to be calculated from completed challenges
+    totalRewards: formatEth(totalRewardsWei),
   };
 
   const formatEth = (wei) => {

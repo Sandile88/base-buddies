@@ -16,7 +16,8 @@ import {
 import { formatEther } from "viem";
 import Layout from "../../../components/Layout";
 import WalletConnect from "../../../components/WalletConnect";
-import { useAccount } from "wagmi";
+import { useAccount, useBlockNumber } from "wagmi";
+import { baseSepolia } from 'wagmi/chains';
 import { useGetChallenge } from "../../../lib/useContract";
 
 export default function ChallengeDetails() {
@@ -29,7 +30,7 @@ export default function ChallengeDetails() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [file, setFile] = useState(null);
 
-  const { data, isLoading, error } = useGetChallenge(challengeId);
+  const { data, isLoading, error, refetch } = useGetChallenge(challengeId);
 
   const toNumber = (value) =>
     typeof value === "bigint" ? Number(value) : value ?? 0;
@@ -117,6 +118,16 @@ export default function ChallengeDetails() {
     : null;
 
   const { isConnected } = useAccount();
+
+  // Auto-refresh detail view and countdowns
+  const { data: detailBlockNumber } = useBlockNumber({ chainId: baseSepolia.id, watch: true });
+  useEffect(() => {
+    refetch?.();
+  }, [detailBlockNumber, refetch]);
+  useEffect(() => {
+    const interval = setInterval(() => setActiveTab((t) => t), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const meta = useMemo(() => {
     if (!challenge) return null;
