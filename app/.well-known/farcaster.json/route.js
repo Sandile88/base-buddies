@@ -12,13 +12,20 @@ function withValidProperties(
 }
 
 export async function GET(request) {
-  // Prefer explicit env var, but fall back to the current request origin
+  // Prefer explicit env var, but fall back to the current request origin.
+  // As an extra guard (Vercel/Edge), reconstruct origin from forwarded headers.
   const requestOrigin = (() => {
     try {
-      return new URL(request.url).origin;
-    } catch (_) {
-      return undefined;
-    }
+      const fromUrl = new URL(request.url).origin;
+      if (fromUrl) return fromUrl;
+    } catch (_) {}
+    try {
+      const headers = request.headers || new Headers();
+      const host = headers.get('x-forwarded-host') || headers.get('host');
+      const proto = headers.get('x-forwarded-proto') || 'https';
+      if (host) return `${proto}://${host}`;
+    } catch (_) {}
+    return undefined;
   })();
 
   const URL = process.env.NEXT_PUBLIC_URL || requestOrigin;
