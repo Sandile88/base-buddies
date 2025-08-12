@@ -44,10 +44,9 @@ export default function Dashboard() {
     watch: true,
   });
 
-  // Auto-refresh dashboard data on new blocks
+  // auto refresh dashboard data
   const { data: blockNumber } = useBlockNumber({ chainId: baseSepolia.id, watch: true });
   useEffect(() => {
-    // These trigger all derived metrics to recompute (created/completed/participants/total rewards)
     refetchAll?.();
     refetchCreated?.();
     refetchCompleted?.();
@@ -60,6 +59,14 @@ export default function Dashboard() {
       return acc + (typeof rewardWei === 'bigint' ? rewardWei : BigInt(rewardWei || 0));
     }, 0n);
 
+    const formatEth = (wei) => {
+      if (wei === undefined || wei === null) return '0 ETH';
+      const value = typeof wei === 'bigint' ? wei : BigInt(wei);
+      const eth = Number(formatEther(value));
+      const decimals = eth >= 1 ? 4 : eth >= 0.001 ? 6 : 8;
+      return `${eth.toFixed(decimals)} ETH`;
+    };
+    
   const user = {
     address: address || 'Not connected',
     balance: formatEth(balanceData?.value ?? 0n),
@@ -68,13 +75,6 @@ export default function Dashboard() {
     totalRewards: formatEth(totalRewardsWei),
   };
 
-  const formatEth = (wei) => {
-    if (wei === undefined || wei === null) return '0 ETH';
-    const value = typeof wei === 'bigint' ? wei : BigInt(wei);
-    const eth = Number(formatEther(value));
-    const decimals = eth >= 1 ? 4 : eth >= 0.001 ? 6 : 8;
-    return `${eth.toFixed(decimals)} ETH`;
-  };
 
   const isChallengeActive = (challenge) => {
     if (!challenge) return false;
@@ -127,12 +127,9 @@ export default function Dashboard() {
       const raw = localStorage.getItem(byIdKey);
       if (raw) {
         const obj = JSON.parse(raw);
-        // We don't know which id was deleted here; refetch will remove from UI.
-        // Leave metadata cleanup to challenge view if accessed later.
         localStorage.setItem(byIdKey, JSON.stringify(obj));
       }
       if (lastDeletedId !== null && lastDeletedId !== undefined) {
-        // Broadcast to other routes/tabs
         localStorage.setItem('bb:challenge-deleted-id', `${String(lastDeletedId)}:${Date.now()}`);
         window.dispatchEvent(new CustomEvent('bb:challenge-deleted', { detail: { id: String(lastDeletedId) } }));
       }
