@@ -175,25 +175,27 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         {/* Hero Section */}
         <div className="text-center mb-12 animate-fade-in">
-          <h1 className="text-4xl md:text-5xl font-bold text-secondary-800 mb-4">
+          <h1 className="text-3xl md:text-5xl font-bold text-secondary-800 mb-3 md:mb-4 px-2 md:px-0">
             Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary-500 to-accent-500">Base Buddies</span>
           </h1>
-          <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+          <p className="text-base md:text-lg text-gray-600 mb-6 md:mb-8 max-w-2xl mx-auto px-4 md:px-0">
             Discover community challenges on Base. Browse freely; connect your wallet when you're ready to create or submit.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-row flex-wrap gap-3 md:gap-4 justify-center px-4 md:px-0">
             {isConnected ? (
               <Link
                 href="/create"
-                className="bg-gradient-to-r from-secondary-500 to-secondary-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg"
+                className="inline-flex items-center justify-center bg-gradient-to-r from-secondary-500 to-secondary-600 text-white rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg w-full sm:w-auto h-12 px-6"
               >
                 Create Challenge
               </Link>
             ) : (
-              <WalletConnect />
+              <div className="w-full sm:w-auto">
+                <WalletConnect fullWidth size="lg" />
+              </div>
             )}
-            <a href="#challenges" className="border-2 border-secondary-500 text-secondary-600 px-8 py-3 rounded-lg font-semibold hover:bg-secondary-50 transition-all">
+            <a href="#challenges" className="inline-flex items-center justify-center border-2 border-secondary-500 text-secondary-600 rounded-lg font-semibold hover:bg-secondary-50 transition-all w-full sm:w-auto h-12 px-6">
               Browse Challenges
             </a>
           </div>
@@ -201,7 +203,7 @@ export default function Home() {
 
         {/* How it works */}
         {!isConnected && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10 px-4 md:px-0">
             <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
               <div className="text-xl font-semibold text-secondary-800 mb-2">Browse</div>
               <p className="text-gray-600 text-sm">Explore challenges created by the community. No wallet needed to browse.</p>
@@ -218,10 +220,10 @@ export default function Home() {
         )}
 
         {/* Filters and Search */}
-        <div className="bg-white/60 backdrop-blur-sm p-6 rounded-xl border border-primary-200 mb-8">
-          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+        <div className="bg-white/60 backdrop-blur-sm p-4 md:p-6 rounded-xl border border-primary-200 mb-6 md:mb-8">
+          <div className="flex flex-col lg:flex-row gap-3 md:gap-4 items-start lg:items-center justify-between">
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
+            <div className="relative w-full lg:flex-1 max-w-full lg:max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
@@ -233,7 +235,7 @@ export default function Home() {
             </div>
 
             {/* Category Filter */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-nowrap overflow-x-auto gap-2 w-full lg:w-auto py-1">
               {categories.map((category) => (
                 <button
                   key={category}
@@ -250,12 +252,12 @@ export default function Home() {
             </div>
 
             {/* Sort */}
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2 w-full lg:w-auto">
               <span className="text-sm text-gray-500">Sort</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500"
+                className="border border-primary-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 w-full lg:w-auto"
               >
                 <option value="newest">Newest</option>
                 <option value="reward">Highest Reward</option>
@@ -267,7 +269,7 @@ export default function Home() {
         </div>
 
         {/* Challenges Grid */}
-        <div id="challenges" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div id="challenges" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 px-4 md:px-0">
           {isLoading && (
             <div className="col-span-full text-center py-8 text-gray-600">Loading challenges...</div>
           )}

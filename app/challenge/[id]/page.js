@@ -169,8 +169,8 @@ export default function ChallengeDetails() {
         {!isLoading && challenge && (
           <>
             {/* challenge header */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-8 mb-8">
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6 md:p-8 mb-6 md:mb-8">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 md:gap-6">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-4">
                     {(meta?.category) && (
@@ -189,14 +189,14 @@ export default function ChallengeDetails() {
                     </span>
                   </div>
 
-                  <h1 className="text-3xl font-bold text-secondary-800 mb-4">
+                  <h1 className="text-2xl md:text-3xl font-bold text-secondary-800 mb-3 md:mb-4">
                     {challenge.title}
                   </h1>
-                  <p className="text-gray-600 mb-6">
+                  <p className="text-gray-600 mb-4 md:mb-6">
                     {challenge.description}
                   </p>
 
-                  <div className="flex items-center gap-6 text-sm text-gray-500">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-500">
                     <div className="flex items-center space-x-1">
                       <Clock className="w-4 h-4" />
                       <span>{challenge.timeLeft} left</span>
@@ -219,15 +219,15 @@ export default function ChallengeDetails() {
                 </div>
 
                 {/* reward card */}
-                <div className="bg-gradient-to-r from-accent-50 to-accent-100 rounded-xl p-6 text-center min-w-[200px]">
-                  <Trophy className="w-8 h-8 text-accent-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-accent-700 mb-1">
+                <div className="bg-gradient-to-r from-accent-50 to-accent-100 rounded-xl p-5 md:p-6 text-center min-w-[180px] md:min-w-[200px]">
+                  <Trophy className="w-7 h-7 md:w-8 md:h-8 text-accent-600 mx-auto mb-2" />
+                  <div className="text-xl md:text-2xl font-bold text-accent-700 mb-1">
                     {challenge.reward}
                   </div>
                   <div className="text-accent-600 text-sm">
                     Total Reward
                   </div>
-                  <button className="w-full mt-4 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-2 px-4 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all">
+                  <button className="w-full mt-3 md:mt-4 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-2 px-4 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all">
                     <Share className="w-4 h-4 inline mr-2" />
                     Share
                   </button>
@@ -236,7 +236,7 @@ export default function ChallengeDetails() {
             </div>
 
             {/* tabs */}
-            <div className="flex space-x-1 mb-8">
+            <div className="flex gap-2 overflow-x-auto mb-6 md:mb-8">
               {[
                 { id: "details", label: "Details" },
                 { id: "submit", label: "Submit Proof" },
@@ -257,7 +257,7 @@ export default function ChallengeDetails() {
             </div>
 
             {/* tab content */}
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-8">
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6 md:p-8">
               {activeTab === "details" && (
                 <div className="space-y-6">
                   <div>
@@ -277,7 +277,7 @@ export default function ChallengeDetails() {
                     <h3 className="text-lg font-semibold text-secondary-800 mb-3">
                       Proof Type
                     </h3>
-                    <div className="flex items-center space-x-3">
+                    <div className="flex items-center gap-3">
                       <Upload className="w-5 h-5 text-secondary-600" />
                       <span className="text-gray-700 capitalize">
                         {meta?.proofType ? `${meta.proofType} ${meta.proofType === 'text' ? 'Response' : meta.proofType === 'link' ? 'Link' : 'Upload'}` : 'File Upload'}

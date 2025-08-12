@@ -136,7 +136,7 @@ export default function Dashboard() {
         </div>
 
         {/* stats cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <Trophy className="w-8 h-8 text-accent-500" />
@@ -184,7 +184,7 @@ export default function Dashboard() {
         </div>
 
         {/* tabs */}
-        <div className="flex space-x-1 mb-8">
+        <div className="flex gap-2 overflow-x-auto mb-6 md:mb-8">
           {[
             { id: 'overview', label: 'Overview' },
             { id: 'created', label: 'Created Challenges' },
@@ -215,7 +215,7 @@ export default function Dashboard() {
 
         {/* tab content */}
         {activeTab === 'overview' && !loadingChallenges && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
             {/* Recent Activity */}
             <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 p-6">
               <h3 className="text-lg font-semibold text-secondary-800 mb-4">Recent Activity</h3>
@@ -223,7 +223,7 @@ export default function Dashboard() {
               {allChallengesList.slice(0, 3).map((challenge, index) => (
 
                 
-                <div key={challenge.id} className="flex items-center space-x-3 p-3 bg-secondary-50 rounded-lg">
+                <div key={challenge.id} className="flex items-center gap-3 p-3 bg-secondary-50 rounded-lg">
                   <Plus className="w-5 h-5 text-secondary-500" />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-800">Challenge created</div>
@@ -293,10 +293,10 @@ export default function Dashboard() {
                   key={challenge.id}
                   className="border border-primary-200 rounded-lg p-6 hover:shadow-md transition-shadow"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
+                    <div className="min-w-0">
                       <h4 className="font-semibold text-secondary-800 mb-1">{challenge.title}</h4>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
                         <div className="flex items-center space-x-1">
                           <Users className="w-4 h-4" />
                           <span>{toNumber(challenge.currentParticipants)}/{toNumber(challenge.maxParticipants)} participants</span>
@@ -320,7 +320,7 @@ export default function Dashboard() {
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="text-sm text-gray-600">
                     Created by: {challenge.creatorNickname || 'Anonymous'}
                     </div>

@@ -6,7 +6,7 @@ import { baseSepolia } from 'wagmi/chains';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
 import { Wallet, LogOut, User } from 'lucide-react';
 
-export default function WalletConnect() {
+export default function WalletConnect({ fullWidth = false, size = 'md' }) {
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
@@ -54,6 +54,9 @@ export default function WalletConnect() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  const widthClass = fullWidth ? 'w-full' : '';
+  const sizeClass = size === 'lg' ? 'h-12 px-6 text-base' : 'px-6 py-2';
+
   return (
     <div className="flex items-center gap-4">
       {isConnected ? (
@@ -76,7 +79,7 @@ export default function WalletConnect() {
         <button
           onClick={handleConnect}
           disabled={isLoading}
-          className="flex items-center gap-2 bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-600 hover:to-secondary-700 text-white px-6 py-2 rounded-lg font-medium transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className={`inline-flex items-center justify-center gap-2 bg-gradient-to-r from-secondary-500 to-secondary-600 hover:from-secondary-600 hover:to-secondary-700 text-white rounded-lg font-medium transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${widthClass} ${sizeClass}`}
         >
           <Wallet className="w-4 h-4" />
           <span>{isLoading ? 'Connecting...' : 'Connect Wallet'}</span>

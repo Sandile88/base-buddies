@@ -1,13 +1,15 @@
 "use client";
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Home, Plus, BarChart3 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Home, Plus, BarChart3, Menu, X } from 'lucide-react';
+import { useState } from 'react';
 import WalletConnect from './WalletConnect';
 
 export default function Navbar() {
-  const router = useRouter();
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  const isActive = (path) => router.pathname === path;
+  const isActive = (path) => pathname === path;
 
   return (
     <nav className="bg-white/80 backdrop-blur-md border-b border-primary-200 sticky top-0 z-50">
@@ -60,8 +62,53 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Wallet Connect */}
-          <WalletConnect />
+          {/* Right side (Wallet + Mobile toggle) */}
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:block">
+              <WalletConnect />
+            </div>
+            <button
+              aria-label="Toggle menu"
+              onClick={() => setMobileOpen((v) => !v)}
+              className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg border border-primary-200 text-secondary-700"
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      <div className={`md:hidden border-t border-primary-200 bg-white/90 backdrop-blur ${mobileOpen ? 'block' : 'hidden'}`}>
+        <div className="container mx-auto px-4 py-3 space-y-2">
+          <Link
+            href="/"
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isActive('/') ? 'bg-secondary-100 text-secondary-700' : 'text-gray-700 hover:bg-primary-100'}`}
+          >
+            <Home className="w-4 h-4" />
+            <span>Home</span>
+          </Link>
+          <Link
+            href="/create"
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isActive('/create') ? 'bg-secondary-100 text-secondary-700' : 'text-gray-700 hover:bg-primary-100'}`}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create</span>
+          </Link>
+          <Link
+            href="/dashboard"
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg ${isActive('/dashboard') ? 'bg-secondary-100 text-secondary-700' : 'text-gray-700 hover:bg-primary-100'}`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Dashboard</span>
+          </Link>
+          {/* Wallet on very small screens */}
+          <div className="sm:hidden pt-2">
+            <WalletConnect />
+          </div>
         </div>
       </div>
     </nav>

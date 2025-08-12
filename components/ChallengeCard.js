@@ -29,8 +29,8 @@ export default function ChallengeCard({ challenge }) {
   };
 
   return (
-    <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300 group">
-      <div className="p-6">
+    <div className="bg-white/70 backdrop-blur-sm rounded-xl border border-primary-200 overflow-hidden hover:shadow-xl md:hover:scale-105 transition-all duration-300 group">
+      <div className="p-4 md:p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-3">
           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(challenge.category)}`}>
@@ -43,21 +43,21 @@ export default function ChallengeCard({ challenge }) {
         </div>
 
         {/* Title and Description */}
-        <h3 className="text-lg font-bold text-secondary-800 mb-2 group-hover:text-secondary-600 transition-colors">
+        <h3 className="text-base md:text-lg font-bold text-secondary-800 mb-2 group-hover:text-secondary-600 transition-colors">
           {challenge.title}
         </h3>
-        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+        <p className="text-gray-600 text-sm mb-4 line-clamp-3 md:line-clamp-2">
           {challenge.description}
         </p>
 
         {/* Reward */}
-        <div className="flex items-center justify-center bg-gradient-to-r from-accent-50 to-accent-100 rounded-lg p-3 mb-4">
-          <Trophy className="w-5 h-5 text-accent-600 mr-2" />
-          <span className="text-accent-700 font-bold text-lg">{challenge.reward}</span>
+        <div className="flex items-center justify-center bg-gradient-to-r from-accent-50 to-accent-100 rounded-lg p-2 md:p-3 mb-4">
+          <Trophy className="w-4 h-4 md:w-5 md:h-5 text-accent-600 mr-2" />
+          <span className="text-accent-700 font-bold text-base md:text-lg">{challenge.reward}</span>
         </div>
 
         {/* Stats */}
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+        <div className="flex items-center justify-between text-xs md:text-sm text-gray-500 mb-4">
           <div className="flex items-center space-x-1">
             <Clock className="w-4 h-4" />
             <span>{challenge.timeLeft}</span>
@@ -76,7 +76,7 @@ export default function ChallengeCard({ challenge }) {
         {/* Action Button */}
         <Link
           href={`/challenge/${challenge.id}`}
-          className="w-full bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 flex items-center justify-center space-x-2 group/button"
+          className="w-full bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all md:transform md:hover:scale-105 flex items-center justify-center space-x-2 group/button"
         >
           <span>View Challenge</span>
           <ExternalLink className="w-4 h-4 group-hover/button:translate-x-1 transition-transform" />
