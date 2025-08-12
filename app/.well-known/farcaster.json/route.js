@@ -11,8 +11,21 @@ function withValidProperties(
   );
 }
 
-export async function GET() {
-  const URL = process.env.NEXT_PUBLIC_URL;
+export async function GET(request) {
+  // Prefer explicit env var, but fall back to the current request origin
+  const requestOrigin = (() => {
+    try {
+      return new URL(request.url).origin;
+    } catch (_) {
+      return undefined;
+    }
+  })();
+
+  const URL = process.env.NEXT_PUBLIC_URL || requestOrigin;
+
+  // Build absolute URLs for required assets with sensible defaults
+  const iconUrl = process.env.NEXT_PUBLIC_APP_ICON || (URL ? `${URL}/icon.png` : undefined);
+  const ogImageUrl = process.env.NEXT_PUBLIC_APP_OG_IMAGE || (URL ? `${URL}/og-image.png` : undefined);
 
   return Response.json({
     accountAssociation: {
@@ -26,14 +39,14 @@ export async function GET() {
       subtitle: process.env.NEXT_PUBLIC_APP_SUBTITLE,
       description: process.env.NEXT_PUBLIC_APP_DESCRIPTION || "A fun onchain app built on Base!",
       screenshotUrls: [],
-      iconUrl: process.env.NEXT_PUBLIC_APP_ICON,
+      iconUrl,
       homeUrl: URL,
-      webhookUrl: `${URL}/api/webhook`,
+      webhookUrl: URL ? `${URL}/api/webhook` : undefined,
       primaryCategory: process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY,
       tags: [],
       ogTitle: process.env.NEXT_PUBLIC_APP_OG_TITLE,
       ogDescription: process.env.NEXT_PUBLIC_APP_OG_DESCRIPTION,
-      ogImageUrl: process.env.NEXT_PUBLIC_APP_OG_IMAGE,
+      ogImageUrl,
       // use only while testing
       "noindex": true
     }),
