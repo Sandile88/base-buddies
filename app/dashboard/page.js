@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target } from 'lucide-react';
+import { Trophy, Clock, CheckCircle, Plus, TrendingUp, Users, Target, Edit, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Layout from '../../components/Layout';
 import { useAccount, useBalance, useBlockNumber } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { formatEther } from 'viem';
-import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges, useCompleteChallenge, useDeleteChallenge } from '../../lib/useContract';
+import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges, useCompleteChallenge, useDeleteChallenge, useEditChallenge, editChallengeParams } from '../../lib/useContract';
 
 
 export default function Dashboard() {
@@ -20,8 +20,17 @@ export default function Dashboard() {
   const { data: completedChallengeIds, isLoading: loadingCompleted, refetch: refetchCompleted } = useGetUserCompletedChallenges(address);
   const { completeChallenge, isLoading: completingChallenge } = useCompleteChallenge();
   const { deleteChallenge, isLoading: deletingChallenge, isSuccess: deleteSuccess } = useDeleteChallenge();
+  const [editingChallenge, setEditingChallenge] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', reward: '', deadline: '' });
+  const { editChallenge, isLoading: editingChallengeLoading, isSuccess: editSuccess } = useEditChallenge();
+
+
+  
+
   const router = useRouter();
   const [lastDeletedId, setLastDeletedId] = useState(null);
+  const [lastEditedId, setLastEditedId] = useState(null);
+
 
   const toNumber = (value) => (typeof value === 'bigint' ? Number(value) : value ?? 0);
   const isValid = (c) => {
@@ -140,6 +149,98 @@ export default function Dashboard() {
     router.refresh();
     setLastDeletedId(null);
   }, [deleteSuccess, refetchAll, refetchCreated, refetchCompleted, router, lastDeletedId]);
+
+  const handleEditChallenge = (challenge) => {
+    setEditingChallenge(challenge);
+    
+    // converting deadline back to date string for the input
+    const deadlineDate = new Date(toNumber(challenge.deadline) * 1000);
+    const dateString = deadlineDate.toISOString().slice(0, 16); 
+    
+    const rewardInEth = Number(formatEther(challenge.reward));
+    
+    setEditForm({
+      title: challenge.title,
+      description: challenge.description,
+      reward: rewardInEth.toString(),
+      deadline: dateString
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      if (!editForm.title.trim() || !editForm.description.trim()) {
+        alert('Title and description are required');
+        return;
+      }
+      
+      if (!editForm.reward || isNaN(editForm.reward) || Number(editForm.reward) <= 0) {
+        alert('Please enter a valid reward amount');
+        return;
+      }
+      
+      if (!editForm.deadline) {
+        alert('Please select a deadline');
+        return;
+      }
+      
+      const deadlineTimestamp = Math.floor(new Date(editForm.deadline).getTime() / 1000);
+      
+      const now = Math.floor(Date.now() / 1000);
+      if (deadlineTimestamp <= now) {
+        alert('Deadline must be in the future');
+        return;
+      }
+      
+      setLastEditedId(editingChallenge.id);
+      const params = editChallengeParams(
+        editingChallenge.id, 
+        editForm.title, 
+        editForm.description,
+        Number(editForm.reward),
+        deadlineTimestamp
+      );
+      await editChallenge(params);
+    } catch (error) {
+      console.error('Error editing challenge:', error);
+      alert('Failed to edit challenge: ' + error.message);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingChallenge(null);
+    setEditForm({ title: '', description: '', reward: '', deadline: '' });
+  };
+
+  // After successful edit, refresh views and update local metadata
+  useEffect(() => {
+    if (!editSuccess) return;
+    try {
+      const byIdKey = 'challengeMetaById';
+      const raw = localStorage.getItem(byIdKey);
+      if (raw && lastEditedId !== null && lastEditedId !== undefined) {
+        const obj = JSON.parse(raw);
+        if (obj[String(lastEditedId)]) {
+          obj[String(lastEditedId)] = {
+            ...obj[String(lastEditedId)],
+          };
+          localStorage.setItem(byIdKey, JSON.stringify(obj));
+        }
+        localStorage.setItem('bb:challenge-edited-id', `${String(lastEditedId)}:${Date.now()}`);
+        window.dispatchEvent(new CustomEvent('bb:challenge-edited', { detail: { id: String(lastEditedId) } }));
+      }
+    } catch (_) {}
+    
+    setEditingChallenge(null);
+    setEditForm({ title: '', description: '', reward: '', deadline: '' });
+    
+    refetchAll?.();
+    refetchCreated?.();
+    refetchCompleted?.();
+    router.refresh();
+    setLastEditedId(null);
+  }, [editSuccess, refetchAll, refetchCreated, refetchCompleted, router, lastEditedId]);
+
 
   return (
     <Layout>
@@ -352,6 +453,12 @@ export default function Dashboard() {
                         View Details →
                       </Link>
                       <button
+                        onClick={() => handleEditChallenge(challenge)}
+                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                      >
+                        Edit
+                      </button>
+                      <button
                         onClick={() => handleDeleteChallenge(challenge.id)}
                         disabled={deletingChallenge}
                         className="text-red-600 hover:text-red-700 text-sm font-medium disabled:opacity-50"
@@ -439,6 +546,67 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+       {/* Edit Challenge Modal */}
+      {editingChallenge && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-secondary-800">Edit Challenge</h3>
+              <button
+                onClick={handleCancelEdit}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500"
+                  placeholder="Challenge title"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows="4"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500"
+                  placeholder="Challenge description"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={editingChallengeLoading}
+                className="bg-secondary-500 text-white px-4 py-2 rounded-lg hover:bg-secondary-600 transition-colors disabled:opacity-50"
+              >
+                {editingChallengeLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
