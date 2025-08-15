@@ -50,7 +50,7 @@ export async function GET(request) {
       homeUrl: URL,
       webhookUrl: URL ? `${URL}/api/webhook` : undefined,
       primaryCategory: process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY,
-      tags: [],
+      tags: ["buddies", "social", "challenges", "rewards"],
       ogTitle: process.env.NEXT_PUBLIC_APP_OG_TITLE,
       ogDescription: process.env.NEXT_PUBLIC_APP_OG_DESCRIPTION,
       ogImageUrl,

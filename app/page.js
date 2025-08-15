@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Filter, Search } from 'lucide-react';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { useAccount, useBlockNumber } from 'wagmi';
+import { useAccount, useBlockNumber, useChainId } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { formatEther } from 'viem';
 import Layout from '../components/Layout';
@@ -18,6 +18,7 @@ export default function Home() {
   const [sortBy, setSortBy] = useState('newest');
   const { setFrameReady, isFrameReady } = useMiniKit();
   const { isConnected } = useAccount();
+  const chainId = useChainId();
   const { data: allChallenges, isLoading, refetch: refetchAllChallenges } = useGetAllChallenges();
   const [refreshSignal, setRefreshSignal] = useState(0);
 
@@ -210,6 +211,16 @@ export default function Home() {
             <a href="#challenges" className="inline-flex items-center justify-center border-2 border-secondary-500 text-secondary-600 rounded-lg font-semibold hover:bg-secondary-50 transition-all w-full sm:w-auto h-12 px-6">
               Browse Challenges
             </a>
+            {isConnected && chainId === baseSepolia.id && (
+              <a
+                href="https://portal.cdp.coinbase.com/products/faucet"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center border border-primary-300 text-secondary-700 bg-white rounded-lg font-semibold hover:bg-primary-50 transition-all w-full sm:w-auto h-12 px-6"
+              >
+                Get Test ETH
+              </a>
+            )}
           </div>
         </div>
 

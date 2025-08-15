@@ -383,22 +383,22 @@ export default function CreateChallenge() {
           <div className="bg-gradient-to-r from-primary-50 to-secondary-50 rounded-lg p-6 border border-secondary-200">
             <h3 className="text-lg font-semibold text-secondary-800 mb-4">Preview</h3>
             <div className="bg-white rounded-lg p-4 border border-primary-200">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <span className="px-3 py-1 bg-secondary-100 text-secondary-700 rounded-full text-xs font-semibold">
-                  {formData.category}
+                  {formData.category || 'Category'}
                 </span>
-                <div className="flex items-center space-x-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-1 text-sm text-gray-700 ml-auto">
+                  <Trophy className="w-4 h-4 text-accent-500" />
+                  <span className="font-semibold">{formData.reward || '0.00'} ETH</span>
+                </div>
+                <div className="flex w-full items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center space-x-1">
                     <Clock className="w-4 h-4" />
-                    <span>{formData.duration} days</span>
+                    <span>{formData.duration || 0} days</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Users className="w-4 h-4" />
-                    <span>{formData.maxParticipants} participants</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Trophy className="w-4 h-4 text-accent-500" />
-                    <span className="font-semibold">{formData.reward || '0.00'} ETH</span>
+                    <span>{formData.maxParticipants || 0} participants</span>
                   </div>
                 </div>
               </div>
@@ -411,12 +411,12 @@ export default function CreateChallenge() {
             </div>
           </div>
 
-          {/* submit button */}
-          <div className="flex gap-4">
+          {/* submit buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <button
               type="button"
               onClick={() => router.push('/')}
-              className="flex-1 border-2 border-primary-300 text-gray-600 py-3 px-6 rounded-lg font-semibold hover:bg-primary-50 transition-all"
+              className="w-full sm:flex-1 border-2 border-primary-300 text-gray-600 py-3 px-6 rounded-lg font-semibold hover:bg-primary-50 transition-all"
               disabled={isLoading}
             >
               Cancel
@@ -424,7 +424,7 @@ export default function CreateChallenge() {
             <button
               type="submit"
               disabled={isLoading || !address}
-              className="flex-1 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:flex-1 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating Challenge...' : 'Create Challenge'}
             </button>
