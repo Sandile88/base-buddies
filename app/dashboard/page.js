@@ -18,7 +18,7 @@ export default function Dashboard() {
   const { data: allChallenges, isLoading: loadingChallenges, refetch: refetchAll } = useGetAllChallenges();
   const { data: createdChallenges, isLoading: loadingCreated, refetch: refetchCreated } = useGetUserCreatedChallenges(address);
   const { data: completedChallengeIds, isLoading: loadingCompleted, refetch: refetchCompleted } = useGetUserCompletedChallenges(address);
-  const { completeChallenge, isLoading: completingChallenge } = useCompleteChallenge();
+  const { completeChallenge, isLoading: completingChallenge, isSuccess: completeSuccess, error: completeError } = useCompleteChallenge();
   const { deleteChallenge, isLoading: deletingChallenge, isSuccess: deleteSuccess } = useDeleteChallenge();
   const [editingChallenge, setEditingChallenge] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', description: '', reward: '', deadline: '' });
@@ -30,6 +30,8 @@ export default function Dashboard() {
   const router = useRouter();
   const [lastDeletedId, setLastDeletedId] = useState(null);
   const [lastEditedId, setLastEditedId] = useState(null);
+  const [lastCompletedId, setLastCompletedId] = useState(null);
+
 
 
   const toNumber = (value) => (typeof value === 'bigint' ? Number(value) : value ?? 0);
@@ -105,17 +107,68 @@ export default function Dashboard() {
     return `${hours}h`;
   };
 
+  // FIXED: Proper complete challenge handler
   const handleCompleteChallenge = async (challengeId, creatorAddress) => {
     try {
+      // Prevent creators from completing their own challenges
       if (address && creatorAddress && address.toLowerCase() === creatorAddress.toLowerCase()) {
-        window.alert('Creators cannot complete their own challenges.');
+        alert('Creators cannot complete their own challenges.');
         return;
       }
-      await completeChallenge({ args: [challengeId] });
+
+      console.log('Completing challenge:', challengeId);
+      setLastCompletedId(challengeId);
+      
+      // Call the contract function
+      await completeChallenge(challengeId);
     } catch (error) {
       console.error('Error completing challenge:', error);
+      
+      // Handle specific contract errors
+      let errorMessage = 'Unknown error';
+      if (error?.message?.includes('already completed')) {
+        errorMessage = 'You have already completed this challenge!';
+      } else if (error?.message?.includes('Challenge is full')) {
+        errorMessage = 'Challenge is full!';
+      } else if (error?.message?.includes('deadline has already passed')) {
+        errorMessage = 'Challenge deadline has passed!';
+      } else if (error?.message?.includes('already participated')) {
+        errorMessage = 'You have already participated in this challenge!';
+      } else if (error?.message?.includes('Insufficient contract balance')) {
+        errorMessage = 'Contract has insufficient funds to pay rewards!';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      alert('Failed to complete challenge: ' + errorMessage);
+      setLastCompletedId(null);
     }
   };
+
+  // Handle successful challenge completion
+  useEffect(() => {
+    if (completeSuccess && lastCompletedId) {
+      console.log('Challenge completed successfully!');
+      alert('🎉 Challenge completed successfully! Reward has been transferred to your wallet.');
+      
+      // Refresh all data
+      refetchAll?.();
+      refetchCreated?.();
+      refetchCompleted?.();
+      
+      // Reset state
+      setLastCompletedId(null);
+    }
+  }, [completeSuccess, lastCompletedId, refetchAll, refetchCreated, refetchCompleted]);
+
+  // Handle completion error
+  useEffect(() => {
+    if (completeError) {
+      console.error('Challenge completion failed:', completeError);
+      alert('Failed to complete challenge: ' + (completeError?.message || 'Transaction failed'));
+      setLastCompletedId(null);
+    }
+  }, [completeError]);
 
   const handleDeleteChallenge = async (challengeId) => {
     try {
@@ -525,10 +578,12 @@ export default function Dashboard() {
                     </div>
                       <button
                       onClick={() => handleCompleteChallenge(challenge.id, challenge.creatorAddress)}
-                      disabled={completingChallenge}
-                      className="bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50"
+                      disabled={completingChallenge && lastCompletedId === challenge.id}
+                      className="bg-accent-500 text-white px-4 py-2 rounded-lg hover:bg-accent-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {completingChallenge ? 'Completing...' : 'Complete Challenge'}
+                      {(completingChallenge && lastCompletedId === challenge.id) 
+                        ? 'Completing...' 
+                        : 'Complete Challenge'}
                     </button>
                   </div>
                 </div>
