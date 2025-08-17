@@ -581,12 +581,13 @@ export default function Dashboard() {
                       >
                         View Details →
                       </Link>
-                      <button
-                        onClick={() => handleEditChallenge(challenge)}
-                        className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                      >
-                        Edit
-                      </button>
+                      {isChallengeActive(challenge) && (
+                        <button
+                          onClick={() => handleEditChallenge(challenge)}
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
                       )}
                       {isChallengeRefundable(challenge) && (
                         <button
