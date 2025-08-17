@@ -9,7 +9,7 @@ import Layout from '../../components/Layout';
 import { useAccount, useBalance, useBlockNumber } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { formatEther } from 'viem';
-import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges, useCompleteChallenge, useDeleteChallenge, useEditChallenge, editChallengeParams } from '../../lib/useContract';
+import { useGetAllChallenges, useGetUserCreatedChallenges, useGetUserCompletedChallenges, useCompleteChallenge, useDeleteChallenge, useEditChallenge, useRefundCreator, editChallengeParams } from '../../lib/useContract';
 
 
 export default function Dashboard() {
@@ -25,12 +25,15 @@ export default function Dashboard() {
   const { editChallenge, isLoading: editingChallengeLoading, isSuccess: editSuccess } = useEditChallenge();
 
 
-  
+  const { refundCreator, isLoading: refundingCreator, isSuccess: refundSuccess, error: refundError } = useRefundCreator();
+
 
   const router = useRouter();
   const [lastDeletedId, setLastDeletedId] = useState(null);
   const [lastEditedId, setLastEditedId] = useState(null);
   const [lastCompletedId, setLastCompletedId] = useState(null);
+  const [lastRefundedId, setLastRefundedId] = useState(null);
+
 
 
 
@@ -94,6 +97,17 @@ export default function Dashboard() {
     const currentParticipants = toNumber(challenge.currentParticipants);
     const maxParticipants = toNumber(challenge.maxParticipants);
     return now <= deadline && currentParticipants < maxParticipants;
+  };
+
+  const isChallengeRefundable = (challenge) => {
+    if (!challenge) return false;
+    const now = Math.floor(Date.now() / 1000);
+    const claimDeadline = toNumber(challenge.deadline) + (10 * 60); // 10 minutes after deadline
+    const currentParticipants = toNumber(challenge.currentParticipants);
+    const maxParticipants = toNumber(challenge.maxParticipants);
+    
+    // Refundable if claim deadline has passed and not all participants claimed
+    return now > claimDeadline && currentParticipants < maxParticipants;
   };
 
   const getTimeLeft = (deadline) => {
@@ -169,6 +183,62 @@ export default function Dashboard() {
       setLastCompletedId(null);
     }
   }, [completeError]);
+
+  
+  // ADDED: Refund Creator handler
+  const handleRefundCreator = async (challengeId) => {
+    try {
+      const confirmed = window.confirm(
+        'Refund unclaimed rewards? This will return any remaining ETH from participants who didn\'t complete the challenge.'
+      );
+      if (!confirmed) return;
+      
+      console.log('Refunding creator for challenge:', challengeId);
+      setLastRefundedId(challengeId);
+      
+      await refundCreator(challengeId);
+    } catch (error) {
+      console.error('Error refunding creator:', error);
+      
+      let errorMessage = 'Unknown error';
+      if (error?.message?.includes('Only creator can refund')) {
+        errorMessage = 'Only the challenge creator can request a refund!';
+      } else if (error?.message?.includes('Claim deadline has not yet passed')) {
+        errorMessage = 'Cannot refund yet - claim deadline has not passed!';
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      alert('Failed to refund: ' + errorMessage);
+      setLastRefundedId(null);
+    }
+  };
+
+  // Handle successful refund
+  useEffect(() => {
+    if (refundSuccess && lastRefundedId) {
+      console.log('Creator refund successful!');
+      alert('💰 Refund successful! Unclaimed rewards have been returned to your wallet.');
+      
+      // Refresh all data
+      refetchAll?.();
+      refetchCreated?.();
+      refetchCompleted?.();
+      
+      // Reset state
+      setLastRefundedId(null);
+    }
+  }, [refundSuccess, lastRefundedId, refetchAll, refetchCreated, refetchCompleted]);
+
+  // Handle refund error
+  useEffect(() => {
+    if (refundError) {
+      console.error('Creator refund failed:', refundError);
+      alert('Failed to process refund: ' + (refundError?.message || 'Transaction failed'));
+      setLastRefundedId(null);
+    }
+  }, [refundError]);
+
 
   const handleDeleteChallenge = async (challengeId) => {
     try {
@@ -488,9 +558,15 @@ export default function Dashboard() {
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                         isChallengeActive(challenge)
                         ? 'bg-secondary-100 text-secondary-700'
+                        : isChallengeRefundable(challenge)
+                        ? 'bg-yellow-100 text-yellow-700'
                         : 'bg-gray-100 text-gray-700'
                     }`}>
-                      {isChallengeActive(challenge) ? 'active' : 'ended'}
+                      {isChallengeActive(challenge) 
+                        ? 'active' 
+                        : isChallengeRefundable(challenge)
+                        ? 'refundable'
+                        : 'ended'}
                     </span>
                   </div>
                   
@@ -511,6 +587,18 @@ export default function Dashboard() {
                       >
                         Edit
                       </button>
+                      )}
+                      {isChallengeRefundable(challenge) && (
+                        <button
+                          onClick={() => handleRefundCreator(challenge.id)}
+                          disabled={refundingCreator && lastRefundedId === challenge.id}
+                          className="text-green-600 hover:text-green-700 text-sm font-medium disabled:opacity-50"
+                        >
+                          {(refundingCreator && lastRefundedId === challenge.id) 
+                            ? 'Refunding...' 
+                            : 'Refund'}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDeleteChallenge(challenge.id)}
                         disabled={deletingChallenge}
