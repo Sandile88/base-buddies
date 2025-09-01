@@ -55,7 +55,7 @@ export async function GET(request) {
       ogDescription: process.env.NEXT_PUBLIC_APP_OG_DESCRIPTION,
       ogImageUrl,
       // use only while testing
-      "noindex": true
+      "noindex": false
     }),
   });
 } 
