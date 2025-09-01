@@ -50,12 +50,12 @@ export async function GET(request) {
       homeUrl: URL,
       webhookUrl: URL ? `${URL}/api/webhook` : undefined,
       primaryCategory: process.env.NEXT_PUBLIC_APP_PRIMARY_CATEGORY,
-      tags: ["buddies", "social", "challenges", "rewards"],
+      tags: ["base buddies", "buddies", "social", "challenges", "rewards"],
       ogTitle: process.env.NEXT_PUBLIC_APP_OG_TITLE,
       ogDescription: process.env.NEXT_PUBLIC_APP_OG_DESCRIPTION,
       ogImageUrl,
       // use only while testing
-      "noindex": false
+      // "noindex": false
     }),
   });
 } 
