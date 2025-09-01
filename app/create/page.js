@@ -17,7 +17,7 @@ const proofTypes = [
 export default function CreateChallenge() {
   const router = useRouter();
   const { address } = useAccount();
-  const { createChallenge, isLoading, isSuccess, error } = useCreateChallenge();
+  const { createChallenge, isLoading, isSuccess, error, hash} = useCreateChallenge();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -31,6 +31,9 @@ export default function CreateChallenge() {
     requirements: '',
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+
   const categories = ['Social', 'Education', 'Lifestyle', 'Creative', 'Tech'];
 
 
@@ -42,6 +45,12 @@ export default function CreateChallenge() {
       return;
     }
 
+     if (isSubmitting) {
+      return; // Prevent double submission
+    }
+
+    setIsSubmitting(true);
+    try {
      // validating form data
      const reward = parseFloat(formData.reward);
      const duration = parseInt(formData.duration);
@@ -83,7 +92,6 @@ export default function CreateChallenge() {
      }
  
 
-    try {
       const deadline = Math.floor(Date.now() / 1000) + (parseInt(formData.duration) * 24 * 60 * 60);
 
       console.log('Form validation passed:', {
@@ -107,26 +115,61 @@ export default function CreateChallenge() {
       console.log('Challenge params created:', params);
 
       // Store extended metadata locally for UI (off-chain)
-      try {
-        const pendingKey = 'challengeMetaPending';
-        const pendingRaw = localStorage.getItem(pendingKey);
-        const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
-        pending.push({
-          title: formData.title,
-          description: formData.description,
-          creatorAddress: address,
-          rewardWei: null,
-          rewardEth: reward,
-          deadline,
-          maxParticipants,
-          category: formData.category,
-          proofType: formData.proofType,
-          requirements: formData.requirements,
-        });
-        localStorage.setItem(pendingKey, JSON.stringify(pending));
-      } catch (_) {}
+       const challengeMetadata = {
+        title: formData.title,
+        description: formData.description,
+        creatorAddress: address,
+        rewardWei: null,
+        rewardEth: reward,
+        deadline,
+        maxParticipants,
+        category: formData.category,
+        proofType: formData.proofType,
+        requirements: formData.requirements,
+        timestamp: Date.now(),
+      };
+    
+  //       const pendingKey = 'challengeMetaPending';
+  //       const pendingRaw = localStorage.getItem(pendingKey);
+  //       const pending = pendingRaw ? JSON.parse(pendingRaw) : [];
+  //       pending.push({
+  //         title: formData.title,
+  //         description: formData.description,
+  //         creatorAddress: address,
+  //         rewardWei: null,
+  //         rewardEth: reward,
+  //         deadline,
+  //         maxParticipants,
+  //         category: formData.category,
+  //         proofType: formData.proofType,
+  //         requirements: formData.requirements,
+  //       });
+  //       localStorage.setItem(pendingKey, JSON.stringify(pending));
+  //     } catch (_) {}
 
-      createChallenge(params);
+  //     createChallenge(params);
+
+  //   } catch (error) {
+  //     console.error('Error creating challenge:', {
+  //       message: error.message,
+  //       stack: error.stack,
+  //       formData
+  //     });
+  //     alert(`Failed to create challenge: ${error.message}`);
+  //   }
+  // };
+
+      // Store in localStorage for immediate UI feedback
+      try {
+        const existingChallenges = JSON.parse(localStorage.getItem('userChallenges') || '[]');
+        existingChallenges.push(challengeMetadata);
+        localStorage.setItem('userChallenges', JSON.stringify(existingChallenges));
+      } catch (storageError) {
+        console.warn('Failed to store in localStorage:', storageError);
+      }
+
+      // Call the smart contract
+      await createChallenge(params);
 
     } catch (error) {
       console.error('Error creating challenge:', {
@@ -135,16 +178,49 @@ export default function CreateChallenge() {
         formData
       });
       alert(`Failed to create challenge: ${error.message}`);
+      setIsSubmitting(false);
     }
   };
 
   // redirecting on success
   useEffect(() => {
-    if (isSuccess) {
-      alert('Challenge created successfully!');
-      router.push('/dashboard');
+    console.log('Challenge creation state:', { isSuccess, isLoading, hash, error });
+
+    if (isSuccess && hash) {
+      console.log('Challenge created successfully with hash:', hash);
+      setIsSubmitting(false);
+
+     // Clear form
+      setFormData({
+        title: '',
+        description: '',
+        creatorNickname: '',
+        category: '',
+        reward: '',
+        duration: '',
+        maxParticipants: '',
+        proofType: '',
+        requirements: '',
+      });
+
+      alert('Challenge created successfully! Transaction hash: ' + hash);
+      
+      // Redirect after a short delay
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
     }
-  }, [isSuccess, router]);
+  }, [isSuccess, hash, router]);
+
+  // Handle errors
+  useEffect(() => {
+    if (error) {
+      console.error('Challenge creation error:', error);
+      setIsSubmitting(false);
+      alert(`Error creating challenge: ${error.message || 'Unknown error occurred'}`);
+    }
+  }, [error]);
+  
 
   const handleChange = (e) => {
     setFormData({
@@ -165,7 +241,7 @@ export default function CreateChallenge() {
     return (reward * participants).toFixed(7);
   };
 
-
+    const isFormLoading = isLoading || isSubmitting;
 
   return (
     <Layout>
@@ -180,9 +256,26 @@ export default function CreateChallenge() {
           <p className="text-gray-600">Launch a fun challenge and build community engagement!</p>
         </div>
 
+        {/* Enhanced error display */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800 text-sm">Error: {error.message}</p>
+            <p className="text-red-800 text-sm">
+              <strong>Error:</strong> {error.message || 'An unknown error occurred'}
+            </p>
+            {error.cause && (
+              <p className="text-red-600 text-xs mt-2">
+                Cause: {error.cause.toString()}
+              </p>
+            )}
+          </div>
+        )}
+
+         {/* Success indicator */}
+        {hash && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <p className="text-green-800 text-sm">
+              <strong>Transaction submitted!</strong> Hash: {hash.slice(0, 10)}...
+            </p>
           </div>
         )}
 
@@ -201,6 +294,8 @@ export default function CreateChallenge() {
               placeholder="e.g., Share Your Pet's Cutest Moment"
               className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
               required
+              disabled={isFormLoading}
+
             />
           </div>
 
@@ -217,6 +312,8 @@ export default function CreateChallenge() {
               onChange={handleChange}
               placeholder="Enter your nickname (optional)"
               className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
+              disabled={isFormLoading}
+
             />
           </div>
 
@@ -234,6 +331,8 @@ export default function CreateChallenge() {
               rows={4}
               className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all resize-none"
               required
+              disabled={isFormLoading}
+
             />
           </div>
 
@@ -250,6 +349,8 @@ export default function CreateChallenge() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
+                disabled={isFormLoading}
+
               >
                 <option value="">Select category</option>
                 {categories.map((category) => (
@@ -269,6 +370,8 @@ export default function CreateChallenge() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
+                disabled={isFormLoading}
+
               >
                 <option value="">Select duration</option>
                 <option value="1">1 day</option>
@@ -290,6 +393,8 @@ export default function CreateChallenge() {
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
+                disabled={isFormLoading}
+
               >
                 <option value="">Select participants</option>
                 <option value="1">1 participant</option>
@@ -317,12 +422,14 @@ export default function CreateChallenge() {
                       checked={formData.proofType === type.value}
                       onChange={handleChange}
                       className="sr-only"
+                      disabled={isFormLoading}
+
                     />
                     <div className={`border-2 rounded-lg p-4 text-center transition-all ${
                       formData.proofType === type.value
                         ? 'border-secondary-500 bg-secondary-50'
                         : 'border-primary-300 hover:border-secondary-300'
-                    }`}>
+                    } ${isFormLoading ? 'opacity-50' : ''}`}>
                       <Icon className={`w-6 h-6 mx-auto mb-2 ${
                         formData.proofType === type.value ? 'text-secondary-600' : 'text-gray-500'
                       }`} />
@@ -337,6 +444,7 @@ export default function CreateChallenge() {
               })}
             </div>
           </div>
+
 
           {/* reward */}
           <div>
@@ -355,6 +463,7 @@ export default function CreateChallenge() {
                 min="0.0000001"
                 className="w-full px-4 py-3 pl-12 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
                 required
+                disabled={isFormLoading}
               />
               <Trophy className="absolute left-4 top-1/2 transform -translate-y-1/2 text-accent-500 w-4 h-4" />
             </div>
@@ -376,6 +485,7 @@ export default function CreateChallenge() {
               placeholder="Any specific requirements or guidelines..."
               rows={3}
               className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all resize-none"
+              disabled={isFormLoading}
             />
           </div>
 
@@ -417,16 +527,16 @@ export default function CreateChallenge() {
               type="button"
               onClick={() => router.push('/')}
               className="w-full sm:flex-1 border-2 border-primary-300 text-gray-600 py-3 px-6 rounded-lg font-semibold hover:bg-primary-50 transition-all"
-              disabled={isLoading}
+              disabled={isFormLoading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isLoading || !address}
+              disabled={isFormLoading || !address}
               className="w-full sm:flex-1 bg-gradient-to-r from-secondary-500 to-secondary-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-secondary-600 hover:to-secondary-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating Challenge...' : 'Create Challenge'}
+              {isFormLoading ? 'Creating Challenge...' : 'Create Challenge'}
             </button>
           </div>
         </form>
