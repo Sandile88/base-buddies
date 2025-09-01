@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 import { useMiniKit } from '@coinbase/onchainkit/minikit';
-import { Wallet, LogOut, User } from 'lucide-react';
+import { Wallet, LogOut, User, Copy, Check } from 'lucide-react';
 
 export default function WalletConnect({ fullWidth = false, size = 'md' }) {
   const { address, isConnected } = useAccount();
@@ -14,6 +14,7 @@ export default function WalletConnect({ fullWidth = false, size = 'md' }) {
   const chainId = useChainId();
   const { setFrameReady, isFrameReady } = useMiniKit();
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
 
   // Set frame ready when component mounts
   useEffect(() => {
@@ -49,6 +50,33 @@ export default function WalletConnect({ fullWidth = false, size = 'md' }) {
     disconnect();
   };
 
+   // Copy address functionality
+  const copyAddressToClipboard = async () => {
+    if (!address) return;
+    
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = address;
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopiedAddress(true);
+        setTimeout(() => setCopiedAddress(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
+
   const formatAddress = (addr) => {
     if (!addr) return '';
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -61,12 +89,20 @@ export default function WalletConnect({ fullWidth = false, size = 'md' }) {
     <div className="flex items-center gap-4">
       {isConnected ? (
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-primary-200">
+           {/* Clickable Address Display */}
+          <button
+            onClick={copyAddressToClipboard}
+            className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-primary-200 hover:bg-white/90 hover:border-primary-300 transition-all cursor-pointer"
+            title="Click to copy full address"
+          >
             <User className="w-4 h-4 text-secondary-600" />
             <span className="text-sm font-medium text-secondary-800">
-              {formatAddress(address)}
+              {copiedAddress ? 'Copied!' : formatAddress(address)}
             </span>
-          </div>
+            {copiedAddress && <Check className="w-4 h-4 text-green-600" />}
+          </button>
+
+          {/* Disconnect Button */}
           <button
             onClick={handleDisconnect}
             className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
