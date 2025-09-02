@@ -57,5 +57,10 @@ export async function GET(request) {
       // use only while testing
       // "noindex": false
     }),
+    baseBuilder: {
+    allowedAddresses: [
+      "0xaF877dac28C53AE16AAaBf6B07123245356Dc765" // Base.dev address
+    ]
+  },
   });
 } 
