@@ -20,7 +20,7 @@ Base Buddies is a decentralized mini app built on the Base blockchain that empow
 
 ## Project Structure
 
-*
+
     ├── README.md
     ├── app
     │   ├── api
